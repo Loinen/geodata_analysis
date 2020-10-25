@@ -32,12 +32,20 @@ for station in stations:
     cols_values = list()
     month = tb_3cols.loc[tb_3cols['STATION'] == station]
     for y in range(2010, 2011):
-        for m in range(1, 12):
+        for m in range(1, 13):
         # берем одну стацию, один месяц
-            month = month.loc['2010-01-01':'{0}-{1}-31'.format(y, m)]
-            print(month)
-            cols_values.append(np.mean(month['TEMP'].tolist()))
-            print(month['TEMP'].tolist(), cols_values)
+            if m < 10:
+                m1 = '{0}-0{1}-01'.format(y, m)
+                month_temp = month.loc[m1:'{0}-0{1}-31'.format(y, m)]
+            else:
+                m1 = '{0}-{1}-01'.format(y, m)
+                m2 = '{0}-{1}-31'.format(y, m)
+                month_temp = month.loc[m1:m2]
+            print(month_temp)
+            cols_values.append(np.mean(month_temp['TEMP'].tolist()))
+            print(month_temp['TEMP'].tolist(), cols_values)
+
+
             # так создаем новую таблицу (это пример с документации)
             # dfl = pd.DataFrame(np.random.randn(5, 4), columns = list('ABCD'),
             #                    index=pd.date_range('20130101',periods=5))
