@@ -1,39 +1,24 @@
-import csv
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import re
-
-
-# Cчитываем файл
-# tb_data = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=0)
-# print(tb_data)
-
-# Или берем только станцию, дату, температуру, индекс - дата
-tb_3cols = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=1,
-                      usecols=['STATION', 'DATE', 'TEMP'])
-print(tb_3cols)
-# кол-во уникальных станций
-print(len(tb_3cols['STATION'].unique()))
+#print(len(tb_3cols['STATION'].unique()))
 stations = tb_3cols['STATION'].unique().tolist()
-print(stations)
+#print(stations)
 # Берем строку с выбранной датой
-print("2010",stations[0])
+#print("2010", stations[0])
 # print(tb_3cols.loc[['2010-01-01']])
 # print("2011")
-dates = pd.date_range(start='2010-01-01',end='2010-02-01', closed='left',freq='D')
+dates = pd.date_range(start='2010-01-01', end='2010-02-01', closed='left', freq='D')
 # print(dates.tolist())
 
 # Создаем датасет со средним значением для каждого месяца
 # сейчас тут скорее псевдокод
-cols = list(['Jan', 'Feb', 'Mer', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-print(cols)
+cols = list(['Year','Jan', 'Feb', 'Mer', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+#print(cols)
 for station in stations:
     cols_values = list()
     month = tb_3cols.loc[tb_3cols['STATION'] == station]
-    for y in range(2010, 2011):
+    for y in range(2010, 2020):
+        cols_year_values = []
         for m in range(1, 13):
-        # берем одну стацию, один месяц
+            # берем одну стацию, один месяц
             if m < 10:
                 m1 = '{0}-0{1}-01'.format(y, m)
                 month_temp = month.loc[m1:'{0}-0{1}-31'.format(y, m)]
@@ -41,11 +26,14 @@ for station in stations:
                 m1 = '{0}-{1}-01'.format(y, m)
                 m2 = '{0}-{1}-31'.format(y, m)
                 month_temp = month.loc[m1:m2]
-            print(month_temp)
-            cols_values.append(np.mean(month_temp['TEMP'].tolist()))
-            print(month_temp['TEMP'].tolist(), cols_values)
+            #print(month_temp)
+            cols_year_values.append(np.mean(month_temp['TEMP'].tolist()))
+        cols_values.append([y]+cols_year_values)
 
+    # print(len(cols_values))
+    print(cols_values)
 
+    table_avg_temp = pd.DataFrame(cols_values, columns=cols)
             # так создаем новую таблицу (это пример с документации)
             # dfl = pd.DataFrame(np.random.randn(5, 4), columns = list('ABCD'),
             #                    index=pd.date_range('20130101',periods=5))
@@ -58,9 +46,5 @@ for station in stations:
     # df_avg_temp = pd.concat([df_avg_temp1, df_avg_temp2], ignore_index=True)
     # df_avg_temp.merge(df_avg_temp, left_on='DATE', right_on='DATE', suffixes=('_left', '_right'))
 
-month.to_csv('result.csv')
-
-# tb_4cols = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=1,
-#                       usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
-# print(tb_4cols)
+table_avg_temp.to_csv('average_temp.csv')
 
