@@ -1,3 +1,19 @@
+import csv
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
+from scipy.stats import kde
+
+# Cчитываем файл
+# tb_data = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=0)
+# print(tb_data)
+
+# Или берем только станцию, дату, температуру, индекс - дата
+tb_3cols = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=1,
+                       usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
+#print(tb_3cols)
+# кол-во уникальных станций
 #print(len(tb_3cols['STATION'].unique()))
 stations = tb_3cols['STATION'].unique().tolist()
 #print(stations)
@@ -47,4 +63,9 @@ for station in stations:
     # df_avg_temp.merge(df_avg_temp, left_on='DATE', right_on='DATE', suffixes=('_left', '_right'))
 
 table_avg_temp.to_csv('average_temp.csv')
+
+
+# tb_4cols = pd.read_csv("global-summary-of-the-day-2020-10-23T07-37-38.csv", index_col=1,
+#                       usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
+# print(tb_4cols)
 
