@@ -18,8 +18,8 @@ from scipy.stats import kde
 cols = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 tb_3cols = pd.read_csv("average_temp.csv", index_col=0,
                        usecols=['Year']+cols)
-
-precip = pd.read_table('nashville_precip.txt', index_col=0,na_values='NA',
+print(tb_3cols)
+precip = pd.read_table('nashville_precip.txt', index_col=0, na_values='NA',
                        delim_whitespace=True)
 # histogram
 _ = tb_3cols.hist(grid=False, width=1.0) # sharex = True
