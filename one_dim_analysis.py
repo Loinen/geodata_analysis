@@ -22,14 +22,13 @@ print(tb_3cols)
 precip = pd.read_table('nashville_precip.txt', index_col=0, na_values='NA',
                        delim_whitespace=True)
 # histogram
-_ = tb_3cols.hist(grid=False, width=1.0) # sharex = True
+_ = tb_3cols.hist(grid=False)  # sharex=True, width=0.5
 plt.margins(0.05, 0.05)
 plt.tight_layout()
 plt.show()
 
 # histogram and kernel estimation for one month
 # берем мат ожидание и дисперсию
-tb_3cols.fillna(value={'Jan': tb_3cols.Jan.mean()}, inplace=True)
 tb_3cols_mean = tb_3cols.mean()
 print(tb_3cols_mean)
 tb_3cols_var = tb_3cols.var()
@@ -38,13 +37,14 @@ print(tb_3cols_var)
 alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
 beta_mom = tb_3cols_var / tb_3cols_mean
 
-yan_avg_temp = tb_3cols['Jan'].tolist()
+yan_avg_temp = tb_3cols['Jul'].tolist()
 plt.hist(yan_avg_temp, bins='auto', density=True)
 
 density = kde.gaussian_kde(yan_avg_temp)
 # temp_grid = np.linspace(min(yan_avg_temp), max(yan_avg_temp), 10)
 # plt.plot(yan_avg_temp, density(yan_avg_temp))
-plt.plot(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), gamma.pdf(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), alpha_mom[0], beta_mom[0]))
+lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
+plt.plot(lin, gamma.pdf(lin, alpha_mom[0], beta_mom[0]))
 plt.show()
 
 # берем мат ожидание и дисперсию
@@ -58,7 +58,8 @@ pbeta_mom = precip_var / precip_mean
 yan_avg_temp = precip['Jan'].tolist()
 density = kde.gaussian_kde(yan_avg_temp)
 precip.Jan.hist(bins=20, density=True)
-plt.plot(np.linspace(0, 10), gamma.pdf(np.linspace(0, 10), palpha_mom[0], pbeta_mom[0]))
+lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
+plt.plot(lin, gamma.pdf(lin, palpha_mom[0], pbeta_mom[0]))
 plt.show()
 
 axs = precip.hist(bins=15, density=True, figsize=(12, 8), sharex=True, sharey=True, grid=False)
