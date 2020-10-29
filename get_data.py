@@ -1,14 +1,21 @@
 """
-The module downloads data from the www.ncei.noaa.gov website
-The file data/stations.csv is from https://gis.ncdc.noaa.gov/maps/ncei/cdo/daily
+The function downloads data from the www.ncei.noaa.gov website
+
+Inputs
+stations_file: The csv file from https://gis.ncdc.noaa.gov/maps/ncei/cdo/daily
+result_dir: The directory to put the result
+years: list with the begin and end year
+
+Output
+csv file with data
 """
 import os
 import wget
 import pandas as pd
 
 
-if __name__ == '__main__':
-    table = pd.read_csv("data/stations.csv", index_col=1,
+def get_data(stations_file, result_dir, years):
+    table = pd.read_csv(stations_file, index_col=1,
                            usecols=['STATION', 'STATION_ID'])
     stations = table['STATION_ID'].unique().tolist()
     print(len(stations))
@@ -16,6 +23,9 @@ if __name__ == '__main__':
     stations = [stations[i:i + 50] for i in range(0, len(stations), 50)]
 
     all_files = []
+
+    start_year = str(years[0])
+    end_year = str(years[1])
 
     for i, stations_batch in enumerate(stations):
         stations_str = ','.join(map(str, stations_batch))
@@ -26,7 +36,7 @@ if __name__ == '__main__':
               f"DEWP,DEWP_ATTRIBUTES,SLP,SLP_ATTRIBUTES,STP,STP_ATTRIBUTES," \
               f"VISIB,VISIB_ATTRIBUTES,WDSP,WDSP_ATTRIBUTES,MXSPD,GUST,MAX," \
               f"MAX_ATTRIBUTES,MIN,MIN_ATTRIBUTES,PRCP,PRCP_ATTRIBUTES,SNDP," \
-              f"FRSHTT&stations={stations_str}&startDate=2010-01-01&endDate=2020-01-02"
+              f"FRSHTT&stations={stations_str}&startDate={start_year}-01-01&endDate={end_year}-01-02"
 
         filename = f"data/data_{i}.csv"
         if os.path.exists(filename):
@@ -37,7 +47,13 @@ if __name__ == '__main__':
 
     df_from_each_file = (pd.read_csv(f) for f in all_files)
     concatenated_df = pd.concat(df_from_each_file, ignore_index=True)
-    concatenated_df.to_csv("data/all_stations_data.csv")
+    concatenated_df.to_csv(result_dir)
 
     for file_name in all_files:
         os.remove(file_name)
+
+if __name__ == '__main__':
+    st_file = "data/stations.csv"
+    res_dir = "data/all_stations_data.csv"
+    dates = [2010, 2020]
+    get_data(st_file, res_dir, dates)
