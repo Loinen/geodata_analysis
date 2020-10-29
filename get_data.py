@@ -55,5 +55,5 @@ def get_data(stations_file, result_dir, years):
 if __name__ == '__main__':
     st_file = "data/stations.csv"
     res_dir = "data/all_stations_data.csv"
-    dates = [1990, 2020]
+    dates = [1990, 2010]
     get_data(st_file, res_dir, dates)

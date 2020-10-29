@@ -29,7 +29,7 @@ def main():
     for station in stations:
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
-        for y in range(2000, 2020):
+        for y in range(1990, 2010):
             cols_year_values = []
             for m in range(1, 13):
                 # берем одну стацию, один месяц
@@ -43,7 +43,13 @@ def main():
                     m3 = '{0}-{1}-28'.format(y, m)
                 tr = np.mean(month['TEMP'].loc[m1:m2])
                 if pd.isna(tr):
-                    stan = tb_3cols.loc[tb_3cols['STATION'] == stations[2]]
+                    print('average', station)
+                    while True:
+                        try:
+                            stan = tb_3cols.loc[tb_3cols['STATION'] == stations[np.random.randint(0, len(stations))]]
+                            break
+                        except RuntimeWarning:
+                            continue
                     average = stan['TEMP'].loc[m1:m3]
                     cols_year_values.append((np.mean(average.tolist()) - 32) / 1.8)
                 else:

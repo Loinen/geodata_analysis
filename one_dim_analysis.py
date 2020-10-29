@@ -36,15 +36,14 @@ print(tb_3cols_var)
 # Посчитаем альфа и бета
 alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
 beta_mom = tb_3cols_var / tb_3cols_mean
-yan_avg_temp = tb_3cols['Mar'].tolist()
-print(yan_avg_temp)
-print(sorted(yan_avg_temp))
+yan_avg_temp = tb_3cols['Apr'].tolist()
 plt.hist(sorted(yan_avg_temp), bins='auto', density=True)
 density = kde.gaussian_kde(sorted(yan_avg_temp))
-#tb_3cols.Mar.hist(bins='auto', density=True)
-# temp_grid = np.linspace(min(yan_avg_temp), max(yan_avg_temp), 10)
-# plt.plot(yan_avg_temp, density(yan_avg_temp))
 lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
+# temp_grid = np.linspace(min(yan_avg_temp), max(yan_avg_temp), 10)
+# tb_3cols.Oct.hist(bins='auto', density=True)
+# plt.plot(yan_avg_temp, density(yan_avg_temp))
+# plt.show()
 plt.plot(lin, gamma.pdf(lin, alpha_mom[0], beta_mom[0]))
 plt.show()
 
