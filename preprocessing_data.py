@@ -10,10 +10,9 @@ def main():
     # Cчитываем файл, берем только станцию, дату, температуру, скорость ветра, индекс - дата
     tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
                            usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
-    # print(tb_3cols)
     # кол-во уникальных станций
     stations = tb_3cols['STATION'].unique().tolist()
-    # print(stations)
+    print(len(stations))
 
     # заполнение nan
     # average = tb_3cols.loc[m1:m2]
@@ -26,10 +25,11 @@ def main():
 
     # Создаем датасет со средним значением для каждого месяца
     cols = list(['Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    all_files = []
     for station in stations:
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
-        for y in range(2010, 2020):
+        for y in range(2000, 2020):
             cols_year_values = []
             for m in range(1, 13):
                 # берем одну стацию, один месяц
@@ -52,8 +52,14 @@ def main():
 
         table_avg_temp = pd.DataFrame(cols_values, columns=cols)
 
-    print(table_avg_temp)
-    table_avg_temp.to_csv('average_temp.csv')
+        print(table_avg_temp)
+        table_avg_temp.to_csv(f'data/average_temp_{station}.csv')
+        all_files.append(f'data/average_temp_{station}.csv')
+
+    #optional join stations in one dataset
+    df_from_each_file = (pd.read_csv(f) for f in all_files)
+    concatenated_df = pd.concat(df_from_each_file, ignore_index=True)
+    concatenated_df.to_csv("data/average_temp.csv")
 
 
 if __name__ == '__main__':
