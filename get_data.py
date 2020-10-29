@@ -18,6 +18,7 @@ def get_data(stations_file, result_dir, years):
     table = pd.read_csv(stations_file, index_col=1,
                            usecols=['STATION', 'STATION_ID'])
     stations = table['STATION_ID'].unique().tolist()
+    print("Initial number of stations")
     print(len(stations))
 
     stations = [stations[i:i + 50] for i in range(0, len(stations), 50)]
@@ -61,5 +62,6 @@ if __name__ == '__main__':
     tb = pd.read_csv(res_dir, index_col=1, na_values='NA',
                      usecols=['STATION', 'DATE'])
     stations = tb['STATION'].unique().tolist()
+    print("Number of fitting stations")
     print(len(stations))
 
