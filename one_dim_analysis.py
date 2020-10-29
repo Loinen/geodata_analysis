@@ -127,7 +127,7 @@ alpha_mle = newton(dlgamma, 2, dl2gamma, args=(log_mean[-1], mean_log[-1]))
 beta_mle = alpha_mle/precip.mean()[-1]
 
 dec = precip.Dec
-dec.hist(bins=10, grid=False)
+dec.hist(bins=10, grid=False, density=True)
 x = np.linspace(0, dec.max())
 plt.plot(x, gamma.pdf(x, palpha_mom[-1], pbeta_mom[-1]), 'm-')
 plt.plot(x, gamma.pdf(x, alpha_mle, beta_mle), 'r--')
@@ -156,7 +156,7 @@ plt.show()
 
 density = kde.gaussian_kde(x)
 xgrid = np.linspace(x.min(), x.max(), 100)
-plt.hist(x, bins=8)
+plt.hist(x, bins=8, density=True)
 plt.plot(xgrid, density(xgrid), 'r-')
 plt.show()
 
