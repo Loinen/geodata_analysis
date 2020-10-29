@@ -12,7 +12,7 @@ from scipy.stats import norm
 from scipy.optimize import newton
 from scipy.special import psi, polygamma
 from scipy.stats import kde
-
+import seaborn as sns
 
 
 cols = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -36,11 +36,12 @@ print(tb_3cols_var)
 # Посчитаем альфа и бета
 alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
 beta_mom = tb_3cols_var / tb_3cols_mean
-
-yan_avg_temp = tb_3cols['Jul'].tolist()
-plt.hist(yan_avg_temp, bins='auto', density=True)
-
-density = kde.gaussian_kde(yan_avg_temp)
+yan_avg_temp = tb_3cols['Mar'].tolist()
+print(yan_avg_temp)
+print(sorted(yan_avg_temp))
+plt.hist(sorted(yan_avg_temp), bins='auto', density=True)
+density = kde.gaussian_kde(sorted(yan_avg_temp))
+#tb_3cols.Mar.hist(bins='auto', density=True)
 # temp_grid = np.linspace(min(yan_avg_temp), max(yan_avg_temp), 10)
 # plt.plot(yan_avg_temp, density(yan_avg_temp))
 lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
@@ -55,20 +56,20 @@ precip_var = precip.var()
 # Посчитаем альфа и бета
 palpha_mom = precip_mean ** 2 / precip_var
 pbeta_mom = precip_var / precip_mean
-yan_avg_temp = precip['Jan'].tolist()
-density = kde.gaussian_kde(yan_avg_temp)
-precip.Jan.hist(bins=20, density=True)
-lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
-plt.plot(lin, gamma.pdf(lin, palpha_mom[0], pbeta_mom[0]))
-plt.show()
+# yan_avg_temp = precip['Jan'].tolist()
+# density = kde.gaussian_kde(yan_avg_temp)
+# precip.Jan.hist(bins=20, density=True)
+# lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
+# plt.plot(lin, gamma.pdf(lin, palpha_mom[0], pbeta_mom[0]))
+# plt.show()
 
-axs = precip.hist(bins=15, density=True, figsize=(12, 8), sharex=True, sharey=True, grid=False)
+axs = tb_3cols.hist(bins=15, density=True, figsize=(12, 8), sharex=True, sharey=True, grid=False)
 
 for ax in axs.ravel():
     m = ax.get_title()
     x = np.linspace(*ax.get_xlim())
-    ax.plot(x, gamma.pdf(x, palpha_mom[m], pbeta_mom[m]))
-    label = 'alpha = {0:.2f}\nbeta = {1:.2f}'.format(palpha_mom[m],pbeta_mom[m])
+    ax.plot(x, gamma.pdf(x, alpha_mom[m], beta_mom[m]))
+    label = 'alpha = {0:.2f}\nbeta = {1:.2f}'.format(alpha_mom[m], beta_mom[m])
     ax.annotate(label, xy=(10, 0.2))
 plt.show()
 
@@ -170,3 +171,14 @@ plt.show()
 # tb_3cols.Jan.hist(bins='auto', density=True)
 # plt.plot(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), gamma.pdf(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), alpha_mom[0], beta_mom[0]))
 # plt.show()
+
+# по второму примеру - доверительные интервалы, выборочные статистики
+
+# tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
+#                        usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
+# plt.figure(figsize=(10, 8))
+# #указываем X и Y
+# plt.scatter(tb_3cols['DATE'], tb_3cols['amount'])
+# plt.xticks(rotation=45)
+# plt.xlabel(u'Номер клиента', fontsize = 20)
+# plt.ylabel(u'Средняя транзакция', fontsize = 20)

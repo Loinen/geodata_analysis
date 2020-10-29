@@ -8,12 +8,12 @@ from scipy.stats import kde
 
 def main():
     # Cчитываем файл, берем только станцию, дату, температуру, скорость ветра, индекс - дата
-    tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
+    tb_3cols = pd.read_csv("data/all_stations_data.csv", index_col=1, na_values='NA',
                            usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
     # print(tb_3cols)
     # кол-во уникальных станций
     stations = tb_3cols['STATION'].unique().tolist()
-    # print(stations)
+    print(stations)
 
     # заполнение nan
     # average = tb_3cols.loc[m1:m2]
@@ -29,7 +29,7 @@ def main():
     for station in stations:
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
-        for y in range(2010, 2020):
+        for y in range(2000, 2020):
             cols_year_values = []
             for m in range(1, 13):
                 # берем одну стацию, один месяц
@@ -43,7 +43,8 @@ def main():
                     m3 = '{0}-{1}-28'.format(y, m)
                 tr = np.mean(month['TEMP'].loc[m1:m2])
                 if pd.isna(tr):
-                    average = tb_3cols['TEMP'].loc[m1:m3]
+                    stan = tb_3cols.loc[tb_3cols['STATION'] == stations[2]]
+                    average = stan['TEMP'].loc[m1:m3]
                     cols_year_values.append((np.mean(average.tolist()) - 32) / 1.8)
                 else:
                     month_temp = month.loc[m1:m2]
