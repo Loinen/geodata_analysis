@@ -18,8 +18,9 @@ def get_data(stations_file, result_dir, years):
     table = pd.read_csv(stations_file, index_col=1,
                            usecols=['STATION', 'STATION_ID'])
     stations = table['STATION_ID'].unique().tolist()
+    print(len(stations))
 
-    stations = [stations[i:i + 1] for i in range(0, len(stations), 1)]
+    stations = [stations[i:i + 50] for i in range(0, len(stations), 50)]
 
     all_files = []
 
@@ -52,8 +53,8 @@ def get_data(stations_file, result_dir, years):
         os.remove(file_name)
 
 if __name__ == '__main__':
-    st_file = "data/stations.csv"
-    res_dir = "data/data.csv"
+    st_file = "data/stations_california.csv.csv"
+    res_dir = "data/data_california.csv"
     dates = [2000, 2020]
     get_data(st_file, res_dir, dates)
 
@@ -61,5 +62,4 @@ if __name__ == '__main__':
                      usecols=['STATION', 'DATE'])
     stations = tb['STATION'].unique().tolist()
     print(len(stations))
-    print(stations)
 
