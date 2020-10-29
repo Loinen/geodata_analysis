@@ -23,13 +23,13 @@ def main():
     # ax.set_xlabel("Date")
     # ax.set_ylabel("Temperature")
     # plt.show()
-
+    st = list()
     # Создаем датасет со средним значением для каждого месяца
     cols = list(['Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     for station in stations:
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
-        for y in range(1990, 2010):
+        for y in range(1990, 2020):
             cols_year_values = []
             for m in range(1, 13):
                 # берем одну стацию, один месяц
@@ -44,6 +44,7 @@ def main():
                 tr = np.mean(month['TEMP'].loc[m1:m2])
                 if pd.isna(tr):
                     print('average', station)
+                    st.append(station)
                     while True:
                         try:
                             stan = tb_3cols.loc[tb_3cols['STATION'] == stations[np.random.randint(0, len(stations))]]
@@ -61,6 +62,7 @@ def main():
 
     print(table_avg_temp)
     table_avg_temp.to_csv('average_temp.csv')
+    print(st)
 
 
 if __name__ == '__main__':
