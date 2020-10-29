@@ -26,6 +26,7 @@ _ = tb_3cols.hist(grid=False)  # sharex=True, width=0.5
 plt.margins(0.05, 0.05)
 plt.tight_layout()
 plt.show()
+plt.savefig('histogram')
 
 # histogram and kernel estimation for one month
 # берем мат ожидание и дисперсию
@@ -46,21 +47,7 @@ lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
 # plt.show()
 plt.plot(lin, gamma.pdf(lin, alpha_mom[0], beta_mom[0]))
 plt.show()
-
-# берем мат ожидание и дисперсию
-precip.fillna(value={'Oct': precip.Oct.mean()}, inplace=True)
-
-precip_mean = precip.mean()
-precip_var = precip.var()
-# Посчитаем альфа и бета
-palpha_mom = precip_mean ** 2 / precip_var
-pbeta_mom = precip_var / precip_mean
-# yan_avg_temp = precip['Jan'].tolist()
-# density = kde.gaussian_kde(yan_avg_temp)
-# precip.Jan.hist(bins=20, density=True)
-# lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
-# plt.plot(lin, gamma.pdf(lin, palpha_mom[0], pbeta_mom[0]))
-# plt.show()
+plt.savefig('apr histogram')
 
 axs = tb_3cols.hist(bins=15, density=True, figsize=(12, 8), sharex=True, sharey=True, grid=False)
 
@@ -71,6 +58,8 @@ for ax in axs.ravel():
     label = 'alpha = {0:.2f}\nbeta = {1:.2f}'.format(alpha_mom[m], beta_mom[m])
     ax.annotate(label, xy=(10, 0.2))
 plt.show()
+plt.savefig('gamma histogram')
+
 
 # пуассон
 y = np.random.poisson(5, size=100)
@@ -116,24 +105,29 @@ xprime = 0.858/0.626
 plt.plot([xprime, xprime], [tanline(xprime), func(xprime)], 'k:')
 plt.text(xprime+.1, -.2, '$x_{n+1}$', fontsize=16)
 plt.show()
+plt.savefig('Newton1')
+
 
 dlgamma = lambda m, log_mean, mean_log: np.log(m) - psi(m) - log_mean + mean_log
 dl2gamma = lambda m, *args: 1./m - polygamma(1, m)
 
-log_mean = precip.mean().apply(np.log)
-mean_log = precip.apply(np.log).mean()
+log_mean = tb_3cols.mean().apply(np.log)
+mean_log = tb_3cols.apply(np.log).mean()
 
-alpha_mle = newton(dlgamma, 2, dl2gamma, args=(log_mean[-1], mean_log[-1]))
-beta_mle = alpha_mle/precip.mean()[-1]
+print(dlgamma, dl2gamma)
+print(log_mean, mean_log)
+alpha_mle = newton(dlgamma, 2, dl2gamma, args=(log_mean[-2], mean_log[-2]))
+beta_mle = alpha_mle/tb_3cols.mean()[-2]
 
-dec = precip.Dec
+dec = tb_3cols.Nov
 dec.hist(bins=10, grid=False, density=True)
 x = np.linspace(0, dec.max())
-plt.plot(x, gamma.pdf(x, palpha_mom[-1], pbeta_mom[-1]), 'm-')
+plt.plot(x, gamma.pdf(x, alpha_mom[-2], beta_mom[-2]), 'm-')
 plt.plot(x, gamma.pdf(x, alpha_mle, beta_mle), 'r--')
 plt.show()
+plt.savefig('Newton-Raphson')
 
-gamma.fit(precip.Dec)
+gamma.fit(tb_3cols.Nov)
 
 # непарам. Ядерные оценки
 
@@ -147,29 +141,22 @@ plt.plot(x, kernels, 'k:')
 plt.plot(x, kernels.sum(1))
 plt.plot(y, np.zeros(len(y)), 'ro', ms=10)
 plt.show()
+plt.savefig('kernels')
 
 x1 = np.random.normal(0, 3, 50)
 x2 = np.random.normal(4, 1, 50)
 x = np.r_[x1, x2]
 plt.hist(x, bins=8)
 plt.show()
+plt.savefig('kernels2')
 
 density = kde.gaussian_kde(x)
 xgrid = np.linspace(x.min(), x.max(), 100)
 plt.hist(x, bins=8, density=True)
 plt.plot(xgrid, density(xgrid), 'r-')
 plt.show()
+plt.savefig('kernels3')
 
-# tb_3cols_mean = tb_3cols.mean()
-# tb_3cols_var = tb_3cols.var()
-# # Посчитаем альфа и бета
-# alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
-# beta_mom = tb_3cols_var / tb_3cols_mean
-# yan_avg_temp = tb_3cols['Jan'].tolist()
-# density = kde.gaussian_kde(yan_avg_temp)
-# tb_3cols.Jan.hist(bins='auto', density=True)
-# plt.plot(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), gamma.pdf(np.linspace(min(yan_avg_temp), max(yan_avg_temp)), alpha_mom[0], beta_mom[0]))
-# plt.show()
 
 # по второму примеру - доверительные интервалы, выборочные статистики
 
@@ -181,3 +168,4 @@ plt.show()
 # plt.xticks(rotation=45)
 # plt.xlabel(u'Номер клиента', fontsize = 20)
 # plt.ylabel(u'Средняя транзакция', fontsize = 20)
+
