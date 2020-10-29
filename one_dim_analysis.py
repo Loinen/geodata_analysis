@@ -5,6 +5,7 @@ import csv
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import scipy as sp
 import re
 from scipy.stats import kde
 from scipy.stats.distributions import gamma
@@ -116,16 +117,16 @@ mean_log = tb_3cols.apply(np.log).mean()
 
 print(dlgamma, dl2gamma)
 print(log_mean, mean_log)
-alpha_mle = newton(dlgamma, 2, dl2gamma, args=(log_mean[-2], mean_log[-2]))
-beta_mle = alpha_mle/tb_3cols.mean()[-2]
-
-dec = tb_3cols.Nov
-dec.hist(bins=10, grid=False, density=True)
-x = np.linspace(0, dec.max())
-plt.plot(x, gamma.pdf(x, alpha_mom[-2], beta_mom[-2]), 'm-')
-plt.plot(x, gamma.pdf(x, alpha_mle, beta_mle), 'r--')
-plt.show()
-plt.savefig('Newton-Raphson')
+# alpha_mle = newton(dlgamma, 2, dl2gamma, args=(log_mean[-2], mean_log[-2]))
+# beta_mle = alpha_mle/tb_3cols.mean()[-2]
+#
+# dec = tb_3cols.Nov
+# dec.hist(bins=10, grid=False, density=True)
+# x = np.linspace(0, dec.max())
+# plt.plot(x, gamma.pdf(x, alpha_mom[-2], beta_mom[-2]), 'm-')
+# plt.plot(x, gamma.pdf(x, alpha_mle, beta_mle), 'r--')
+# plt.show()
+# plt.savefig('Newton-Raphson')
 
 gamma.fit(tb_3cols.Nov)
 
@@ -160,12 +161,81 @@ plt.savefig('kernels3')
 
 # по второму примеру - доверительные интервалы, выборочные статистики
 
-# tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
-#                        usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
-# plt.figure(figsize=(10, 8))
-# #указываем X и Y
-# plt.scatter(tb_3cols['DATE'], tb_3cols['amount'])
-# plt.xticks(rotation=45)
-# plt.xlabel(u'Номер клиента', fontsize = 20)
-# plt.ylabel(u'Средняя транзакция', fontsize = 20)
+tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
+                       usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
+plt.figure(figsize=(10, 8))
+# указываем X и Y
+plt.scatter(tb_3cols['DATE'], tb_3cols['amount'])
+plt.xticks(rotation=45)
+plt.xlabel(u'Номер клиента', fontsize=20)
+plt.ylabel(u'Средняя транзакция', fontsize=20)
+
+# Вычисление выборочного среднего, дисперсии, СКО, медианы
+mean = df_clients['amount'].mean()
+var = df_clients['amount'].var()
+std = df_clients['amount'].std()
+median = df_clients['amount'].median()
+
+# Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
+trimmed_mean = scipy.stats.trim_mean(df_clients['amount'], proportiontocut=0.1)
+
+
+# median absolute deviation
+def mad(df):
+    # параметр для логнормального распределения
+    sigma = 1.2
+    k = scipy.stats.lognorm.ppf(3 / 4., s=sigma)
+    median = df.median()
+
+    return k * np.median(np.fabs(df - median))
+
+
+# Вычисление MAD-характеристики (Median Absolute Deviation)
+mad_value = mad(df_clients['amount'])
+
+print(f'Средний размер транзакции: среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
+      f'медиана = {int(median)}, усеченное среднее {int(trimmed_mean)}, MAD = {int(mad_value)}')
+
+# %%
+
+# Расчет 95% доверительного интервала для выборочного среднего
+norm_q95 = scipy.stats.norm.ppf(0.95)
+mean_conf = norm_q95 * std / np.sqrt(len(df_clients))
+
+# Расчет 95% доверительных интервалов для дисперсии и СКО
+chi2_q95_left = scipy.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(df_clients) - 1)
+chi2_q95_right = scipy.stats.chi2.ppf(0.05 / 2.0, df=len(df_clients) - 1)
+
+var_conf_left = var * (len(df_clients) - 1) / chi2_q95_left
+var_conf_right = var * (len(df_clients) - 1) / chi2_q95_right
+std_conf_left = np.sqrt(var_conf_left)
+std_conf_right = np.sqrt(var_conf_right)
+
+# Вывод полученных значений в консоль
+print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
+      % (var_conf_left, var_conf_right))
+print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
+      % (std_conf_left, std_conf_right))
+
+# %%
+
+# Построение гистограммы и ядерной оценки плотности
+plt.figure(figsize=(10, 8))
+
+kernel = scipy.stats.gaussian_kde(df_clients['amount'])
+
+min_amount, max_amount = df_clients['amount'].min(), df_clients['amount'].max()
+x = np.linspace(min_amount, max_amount, len(df_clients))
+kde_values = kernel(x)
+
+sns.distplot(df_clients['amount'], kde=False, norm_hist=True, label=f'Средний размер транзакции в рублях')
+plt.plot(x, kde_values)
+
+plt.ylabel('p')
+plt.xlabel('Средний размер транзакции')
+# Отображаем значения по оси абсцисс только в интервале [0, 10000]
+plt.xlim(0, 10e4)
+plt.legend()
+plt.show()
 
