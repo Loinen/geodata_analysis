@@ -56,7 +56,7 @@ def get_data(stations_file, result_dir, years):
 if __name__ == '__main__':
     st_file = "data/stations_california.csv.csv"
     res_dir = "data/data_california.csv"
-    dates = [2000, 2020]
+    dates = [1990, 2020]
     get_data(st_file, res_dir, dates)
 
     tb = pd.read_csv(res_dir, index_col=1, na_values='NA',
