@@ -64,4 +64,3 @@ if __name__ == '__main__':
     stations = tb['STATION'].unique().tolist()
     print("Number of fitting stations")
     print(len(stations))
-

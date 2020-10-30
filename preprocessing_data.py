@@ -8,11 +8,11 @@ from scipy.stats import kde
 
 def main():
     # Cчитываем файл, берем только станцию, дату, температуру, скорость ветра, индекс - дата
-    tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
+    tb_3cols = pd.read_csv("data/all_stations_data.csv", index_col=1, na_values='NA',
                            usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
     # кол-во уникальных станций
     stations = tb_3cols['STATION'].unique().tolist()
-    print(len(stations))
+    print(stations)
 
     # заполнение nan
     # average = tb_3cols.loc[m1:m2]
@@ -22,14 +22,14 @@ def main():
     # ax.set_xlabel("Date")
     # ax.set_ylabel("Temperature")
     # plt.show()
-
+    st = list()
     # Создаем датасет со средним значением для каждого месяца
     cols = list(['Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     all_files = []
     for station in stations:
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
-        for y in range(2000, 2020):
+        for y in range(1990, 2020):
             cols_year_values = []
             for m in range(1, 13):
                 # берем одну стацию, один месяц
@@ -43,7 +43,15 @@ def main():
                     m3 = '{0}-{1}-28'.format(y, m)
                 tr = np.mean(month['TEMP'].loc[m1:m2])
                 if pd.isna(tr):
-                    average = tb_3cols['TEMP'].loc[m1:m3]
+                    print('average', station)
+                    st.append(station)
+                    while True:
+                        try:
+                            stan = tb_3cols.loc[tb_3cols['STATION'] == stations[np.random.randint(0, len(stations))]]
+                            break
+                        except RuntimeWarning:
+                            continue
+                    average = stan['TEMP'].loc[m1:m3]
                     cols_year_values.append((np.mean(average.tolist()) - 32) / 1.8)
                 else:
                     month_temp = month.loc[m1:m2]
@@ -51,10 +59,10 @@ def main():
             cols_values.append([y] + cols_year_values)
 
         table_avg_temp = pd.DataFrame(cols_values, columns=cols)
-
         print(table_avg_temp)
         table_avg_temp.to_csv(f'data/average_temp_{station}.csv')
         all_files.append(f'data/average_temp_{station}.csv')
+        print(st)
 
     #optional join stations in one dataset
     df_from_each_file = (pd.read_csv(f) for f in all_files)
