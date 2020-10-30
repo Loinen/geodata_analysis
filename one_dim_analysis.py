@@ -17,11 +17,12 @@ import seaborn as sns
 
 
 cols = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-tb_3cols = pd.read_csv("data/average_temp.csv", index_col=0,
+tb_3cols = pd.read_csv("data/average_temp_26063099999.csv", index_col=0,
                        usecols=['Year']+cols)
+
+print("Average temperatures in each month")
 print(tb_3cols)
-precip = pd.read_table('nashville_precip.txt', index_col=0, na_values='NA',
-                       delim_whitespace=True)
+
 # histogram
 _ = tb_3cols.hist(grid=False)  # sharex=True, width=0.5
 plt.margins(0.05, 0.05)
@@ -29,12 +30,15 @@ plt.tight_layout()
 plt.show()
 plt.savefig('histogram')
 
-# histogram and kernel estimation for one month
 # берем мат ожидание и дисперсию
 tb_3cols_mean = tb_3cols.mean()
+print("Temperature expectations for each month")
 print(tb_3cols_mean)
+
 tb_3cols_var = tb_3cols.var()
+print("Temperature variances for each month")
 print(tb_3cols_var)
+
 # Посчитаем альфа и бета
 alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
 beta_mom = tb_3cols_var / tb_3cols_mean

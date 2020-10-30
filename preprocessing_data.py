@@ -8,7 +8,7 @@ from scipy.stats import kde
 
 def main():
     # Cчитываем файл, берем только станцию, дату, температуру, скорость ветра, индекс - дата
-    tb_3cols = pd.read_csv("data/all_stations_data.csv", index_col=1, na_values='NA',
+    tb_3cols = pd.read_csv("data/data_spb.csv", index_col=1, na_values='NA',
                            usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
     # кол-во уникальных станций
     stations = tb_3cols['STATION'].unique().tolist()
@@ -18,15 +18,17 @@ def main():
     # average = tb_3cols.loc[m1:m2]
     # tb_3cols.fillna(value={'TEMP': average['TEMP'].mean()}, inplace=True)
 
-    # ax = tb_3cols.plot(figsize=(16, 5), title='Temperature')
-    # ax.set_xlabel("Date")
-    # ax.set_ylabel("Temperature")
-    # plt.show()
-    st = list()
+    #st = list()
     # Создаем датасет со средним значением для каждого месяца
     cols = list(['Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     all_files = []
     for station in stations:
+
+        # ax = tb_3cols.plot(figsize=(16, 5), title='Temperature')
+        # ax.set_xlabel("Date")
+        # ax.set_ylabel("Temperature")
+        # plt.show()
+
         cols_values = list()
         month = tb_3cols.loc[tb_3cols['STATION'] == station]
         for y in range(1990, 2020):
@@ -43,8 +45,8 @@ def main():
                     m3 = '{0}-{1}-28'.format(y, m)
                 tr = np.mean(month['TEMP'].loc[m1:m2])
                 if pd.isna(tr):
-                    print('average', station)
-                    st.append(station)
+                    #print('average', station)
+                    #st.append(station)
                     while True:
                         try:
                             stan = tb_3cols.loc[tb_3cols['STATION'] == stations[np.random.randint(0, len(stations))]]
@@ -62,7 +64,7 @@ def main():
         print(table_avg_temp)
         table_avg_temp.to_csv(f'data/average_temp_{station}.csv')
         all_files.append(f'data/average_temp_{station}.csv')
-        print(st)
+        #print(st)
 
     #optional join stations in one dataset
     df_from_each_file = (pd.read_csv(f) for f in all_files)

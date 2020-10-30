@@ -54,8 +54,8 @@ def get_data(stations_file, result_dir, years):
         os.remove(file_name)
 
 if __name__ == '__main__':
-    st_file = "data/stations_california.csv.csv"
-    res_dir = "data/data_california.csv"
+    st_file = "data/stations_spb.csv"
+    res_dir = "data/data_spb.csv"
     dates = [1990, 2020]
     get_data(st_file, res_dir, dates)
 
