@@ -165,37 +165,41 @@ plt.savefig('kernels3')
 
 # по второму примеру - доверительные интервалы, выборочные статистики
 
-tb_3cols = pd.read_csv("data/data_one_dim.csv", index_col=1, na_values='NA',
+tb_3cols_all = pd.read_csv("data/data_spb.csv", index_col=0, na_values='NA',
                        usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
+tb_3cols = tb_3cols_all.loc[26063099999]
+
 plt.figure(figsize=(10, 8))
 # указываем X и Y
-plt.scatter(tb_3cols['DATE'], tb_3cols['amount'])
+print(tb_3cols['TEMP'])
+print(tb_3cols['DATE'])
+plt.scatter(tb_3cols['DATE'], tb_3cols['TEMP'])
 plt.xticks(rotation=45)
 plt.xlabel(u'Номер клиента', fontsize=20)
 plt.ylabel(u'Средняя транзакция', fontsize=20)
 
 # Вычисление выборочного среднего, дисперсии, СКО, медианы
-mean = df_clients['amount'].mean()
-var = df_clients['amount'].var()
-std = df_clients['amount'].std()
-median = df_clients['amount'].median()
+mean = tb_3cols['TEMP'].mean()
+var = tb_3cols['TEMP'].var()
+std = tb_3cols['TEMP'].std()
+median = tb_3cols['TEMP'].median()
 
 # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
-trimmed_mean = scipy.stats.trim_mean(df_clients['amount'], proportiontocut=0.1)
+trimmed_mean = sp.stats.trim_mean(tb_3cols['TEMP'], proportiontocut=0.1)
 
 
 # median absolute deviation
 def mad(df):
     # параметр для логнормального распределения
     sigma = 1.2
-    k = scipy.stats.lognorm.ppf(3 / 4., s=sigma)
+    k = sp.stats.lognorm.ppf(3 / 4., s=sigma)
     median = df.median()
 
     return k * np.median(np.fabs(df - median))
 
 
 # Вычисление MAD-характеристики (Median Absolute Deviation)
-mad_value = mad(df_clients['amount'])
+mad_value = mad(tb_3cols['TEMP'])
 
 print(f'Средний размер транзакции: среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
       f'медиана = {int(median)}, усеченное среднее {int(trimmed_mean)}, MAD = {int(mad_value)}')
@@ -203,15 +207,15 @@ print(f'Средний размер транзакции: среднее = {int(
 # %%
 
 # Расчет 95% доверительного интервала для выборочного среднего
-norm_q95 = scipy.stats.norm.ppf(0.95)
-mean_conf = norm_q95 * std / np.sqrt(len(df_clients))
+norm_q95 = sp.stats.norm.ppf(0.95)
+mean_conf = norm_q95 * std / np.sqrt(len(tb_3cols))
 
 # Расчет 95% доверительных интервалов для дисперсии и СКО
-chi2_q95_left = scipy.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(df_clients) - 1)
-chi2_q95_right = scipy.stats.chi2.ppf(0.05 / 2.0, df=len(df_clients) - 1)
+chi2_q95_left = sp.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(tb_3cols) - 1)
+chi2_q95_right = sp.stats.chi2.ppf(0.05 / 2.0, df=len(tb_3cols) - 1)
 
-var_conf_left = var * (len(df_clients) - 1) / chi2_q95_left
-var_conf_right = var * (len(df_clients) - 1) / chi2_q95_right
+var_conf_left = var * (len(tb_3cols) - 1) / chi2_q95_left
+var_conf_right = var * (len(tb_3cols) - 1) / chi2_q95_right
 std_conf_left = np.sqrt(var_conf_left)
 std_conf_right = np.sqrt(var_conf_right)
 
@@ -227,13 +231,13 @@ print("95%% Доверительный интервал выборочного �
 # Построение гистограммы и ядерной оценки плотности
 plt.figure(figsize=(10, 8))
 
-kernel = scipy.stats.gaussian_kde(df_clients['amount'])
+kernel = sp.stats.gaussian_kde(tb_3cols['TEMP'])
 
-min_amount, max_amount = df_clients['amount'].min(), df_clients['amount'].max()
-x = np.linspace(min_amount, max_amount, len(df_clients))
+min_amount, max_amount = tb_3cols['TEMP'].min(), tb_3cols['TEMP'].max()
+x = np.linspace(min_amount, max_amount, len(tb_3cols))
 kde_values = kernel(x)
 
-sns.distplot(df_clients['amount'], kde=False, norm_hist=True, label=f'Средний размер транзакции в рублях')
+sns.distplot(tb_3cols['TEMP'], kde=False, norm_hist=True, label=f'Средний размер транзакции в рублях')
 plt.plot(x, kde_values)
 
 plt.ylabel('p')
