@@ -181,17 +181,17 @@ tb_3cols_all = pd.read_csv("data/data_spb.csv", index_col=0, na_values='NA',
                        usecols=['STATION', 'DATE', 'TEMP', 'WDSP'])
 tb_3cols = tb_3cols_all.loc[26063099999]
 
-plt.figure(figsize=(10, 8))
-# указываем X и Y
-print(tb_3cols['TEMP'])
-print(tb_3cols['DATE'])
-plt.title("Дата и температура по станции 26063099999")
-plt.scatter(tb_3cols['DATE'], tb_3cols['TEMP'])
-plt.xticks(rotation=45)
-plt.xlabel(u'Дата', fontsize=20)
-plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
-plt.legend()
-plt.show()
+# plt.figure(figsize=(10, 8))
+# # указываем X и Y
+# print(tb_3cols['TEMP'])
+# print(tb_3cols['DATE'])
+# plt.title("Дата и температура по станции 26063099999")
+# plt.scatter(tb_3cols['DATE'], tb_3cols['TEMP'])
+# plt.xticks(rotation=45)
+# plt.xlabel(u'Дата', fontsize=20)
+# plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
+# plt.legend()
+# plt.show()
 
 # Вычисление выборочного среднего, дисперсии, СКО, медианы
 mean = tb_3cols['TEMP'].mean()
@@ -213,7 +213,7 @@ def mad(df):
 # Вычисление MAD-характеристики (Median Absolute Deviation)
 mad_value = mad(tb_3cols['TEMP'])
 
-print(f'Средний размер транзакции: среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
+print(f'Средняя температура Фаренгейт (за все годы, что не очень полезно): среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
       f'медиана = {int(median)}, усеченное среднее {int(trimmed_mean)}, MAD = {int(mad_value)}')
 
 # Расчет 95% доверительного интервала для выборочного среднего
@@ -247,16 +247,36 @@ kde_values = kernel(x)
 
 den = tb_3cols['TEMP'].tolist()
 density = kde.gaussian_kde(sorted(den))
-sns.displot(tb_3cols['TEMP'], kde=False, norm_hist=True, label=f'Средний размер транзакции в рублях')
+#norm_hist=True,
+sns.displot(tb_3cols['TEMP'], kde=False,  label=f'Средняя температура')
 plt.plot(x, kde_values)
 plt.show()
 
 fig, ax = plt.subplots()
-plt.title("Построение гистограммы и ядерной оценки плотности")
+plt.title("Построение гистограммы и ядерной оценки плотности 2")
 plt.ylabel('p')
-plt.xlabel('Средний размер транзакции')
+plt.xlabel('Средняя температура')
 # Отображаем значения по оси абсцисс только в интервале [0, 10000]
 plt.xlim(0, 10e4)
 plt.legend()
 plt.show()
 fig.savefig('ядерной оценки плотности')
+
+tb_2cols = tb_3cols[['DATE', 'TEMP']]
+tb_2cols.set_index('DATE')
+plt.title("Гистограмма временного ряда loc[26063099999]")
+plt.xlabel(u'Дата', fontsize=20)
+plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
+plt.legend()
+tb_2cols.hist()
+plt.show()
+
+plt.title(" График распределения с использованием функции сглаживания")
+plt.xlabel(u'Дата', fontsize=20)
+plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
+plt.legend()
+tb_2cols.plot.kde()
+plt.show()
+
+# ящик
+srez = tb_2cols.loc['2000-01-01':'2000-12-31']
