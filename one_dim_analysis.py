@@ -263,7 +263,9 @@ plt.show()
 fig.savefig('ядерной оценки плотности')
 
 tb_2cols = tb_3cols[['DATE', 'TEMP']]
-tb_2cols.set_index('DATE')
+tb_2cols.reset_index(drop=True, inplace=True)
+tb_2cols.index = tb_2cols.DATE
+tb_2cols.drop('DATE', axis=1, inplace=True)
 plt.title("Гистограмма временного ряда loc[26063099999]")
 plt.xlabel(u'Дата', fontsize=20)
 plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
@@ -280,3 +282,13 @@ plt.show()
 
 # ящик
 srez = tb_2cols.loc['2000-01-01':'2000-12-31']
+srez.index = pd.to_datetime(srez.index)
+print(srez)
+groups = srez.groupby(pd.Grouper(freq="1M"))
+print(srez)
+month = pd.concat([pd.DataFrame(x[1].values) for x in groups], axis=1)
+month = pd.DataFrame(month)
+month.columns = range(1, 13)
+month.boxplot()
+plt.show()
+
