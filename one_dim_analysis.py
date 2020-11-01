@@ -13,6 +13,8 @@ from scipy.optimize import newton
 from scipy.special import psi, polygamma
 from scipy.stats import kde
 import seaborn as sns
+from math import sqrt
+
 
 # Берем одну станцию, со средней температурой для каждого месяца в году
 cols = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -253,33 +255,31 @@ sns.displot(tb_3cols['TEMP'], kde=False,  label=f'Средняя темпера�
 plt.plot(x, kde_values)
 plt.show()
 
-fig, ax = plt.subplots()
-plt.title("Построение гистограммы и ядерной оценки плотности 2")
-plt.ylabel('p')
-plt.xlabel('Средняя температура')
-# Отображаем значения по оси абсцисс только в интервале [0, 10000]
-plt.xlim(0, 10e4)
-plt.legend()
-plt.show()
-fig.savefig('ядерной оценки плотности')
+# fig, ax = plt.subplots()
+# plt.title("Построение гистограммы и ядерной оценки плотности 2")
+# plt.ylabel('p')
+# plt.xlabel('Средняя температура')
+# # Отображаем значения по оси абсцисс только в интервале [0, 10000]
+# plt.xlim(0, 10e4)
+# plt.legend()
+# plt.show()
+# fig.savefig('ядерной оценки плотности')
 
 tb_2cols = tb_3cols[['DATE', 'TEMP']]
 tb_2cols.reset_index(drop=True, inplace=True)
 tb_2cols.index = tb_2cols.DATE
 tb_2cols.drop('DATE', axis=1, inplace=True)
+tb_2cols.hist()
 plt.title("Гистограмма временного ряда loc[26063099999]")
 plt.xlabel(u'Дата', fontsize=20)
 plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
-plt.legend()
-tb_2cols.hist()
 plt.show()
 
 fig = plt.figure()
 plt.title("График распределения с использованием функции сглаживания")
+tb_2cols.plot.kde()
 plt.xlabel(u'Дата', fontsize=20)
 plt.ylabel(u'Температура (Фаренгейты)', fontsize=20)
-plt.legend()
-tb_2cols.plot.kde()
 plt.show()
 fig.savefig('График распределения с использованием функции сглаживания.png')
 
@@ -296,5 +296,130 @@ month.columns = range(1, 13)
 month.boxplot()
 plt.show()
 fig.savefig('Ящик с усами.png')
+
+# задача - сравнить два распределения. Возьмем за 2000 год и 2010 год (можно ветер с темп, но смысл?)
+srez2 = tb_2cols.loc['2010-01-01':'2010-12-31']
+
+print(f'Количество дней в 2010 году: {len(srez2)}')
+print(f'Количество дней в 2000 году: {len(srez)}')
+
+col1 = np.full(len(srez), 2000)
+col2 = np.full(len(srez2), 2010)
+srez['TIME'] = col1
+srez2['TIME'] = col2
+sr_2years = pd.concat([srez, srez2], ignore_index=True)
+fig, ax = plt.subplots()
+plt.figure(figsize=(8, 8))
+sns.displot(data=sr_2years, kde=True, x='TEMP', color='green', hue="TIME")
+# sns.displot(data=srez, kde=True, x='TEMP', color='green')
+# sns.displot(data=srez2, kde=True, x='TEMP', color='red')
+plt.ylabel('p')
+plt.xlabel('Температура')
+plt.xlim(0, 90)
+plt.show()
+fig.savefig('2000-2010.png')  # не сохраняется
+
+# Расчет доверительных интервалов для 25%, 50% и 75% квантилей
+def conf_intervals(data, qn):
+    # 95% квантиль распределения Гаусса
+    norm_q95 = sp.stats.norm.ppf(0.95)
+    kernel = sp.stats.gaussian_kde(data)
+
+    p25 = len(data[data < qn[5]]) / len(data)
+    sigma25 = \
+        (sqrt((p25 * (1 - p25)) / len(data))) / kernel(qn[5])
+    p50 = len(data[data < qn[10]]) / len(data)
+    sigma50 = \
+        (sqrt((p50 * (1 - p50)) / len(data))) / kernel(qn[10])
+    p75 = len(data[data < qn[15]]) / len(data)
+    sigma75 = \
+        (sqrt((p75 * (1 - p75)) / len(data))) / kernel(qn[15])
+
+    conf_q25 = norm_q95 * sigma25
+    conf_q50 = norm_q95 * sigma50
+    conf_q75 = norm_q95 * sigma75
+
+    return [conf_q25, conf_q50, conf_q75]
+
+# Расчет квантилей
+percs = np.linspace(0, 100, 21)
+qn_first = np.percentile(srez['TEMP'], percs)
+qn_second = np.percentile(srez2['TEMP'], percs)
+
+conf_first = conf_intervals(srez['TEMP'], qn_first)
+conf_second = conf_intervals(srez2['TEMP'], qn_first)
+
+print(f'25%, 50%, 75% - доверительные интервалы для температуры за 2000 год:\n {conf_first}')
+print(f'25%, 50%, 75% - доверительные интервалы для температуры за 2010 год:\n {conf_second}')
+
+#%%
+
+# Построение квантильного биплота для двух случайных величин
+plt.figure(figsize=(12, 12))
+
+min_qn = np.min([qn_first.min(), qn_second.min()])
+max_qn = np.max([qn_first.max(), qn_second.max()])
+x = np.linspace(min_qn, max_qn)
+
+plt.plot(qn_first, qn_second, ls="", marker="o", markersize=6)
+plt.plot(x, x, color="k", ls="--")
+plt.xlabel('2000')
+plt.ylabel('2010')
+plt.xlim([min_qn, 100])
+plt.ylim([min_qn, 100])
+plt.grid(True)
+conf1 = list()
+conf1.append(conf_first[0][0])
+conf1.append(conf_first[1][0])
+conf1.append(conf_first[2][0])
+conf2 = list()
+conf2.append(conf_second[0][0])
+conf2.append(conf_second[1][0])
+conf2.append(conf_second[2][0])
+print('rr', conf1, conf2)
+# Добавление доверительных интервалов на график
+plt.errorbar(
+    # [25%, 50%, 75%]
+    [qn_first[5], qn_first[10], qn_first[15]],
+    [qn_second[5], qn_second[10], qn_second[15]],
+    xerr=conf1,
+    yerr=conf2,
+    ls='none',
+    capsize=3,
+    elinewidth=2
+)
+
+plt.title('QQ-plot')
+plt.show()
+
+# Определение параметров логнормального распределения средней величины температуры 2000
+x = np.linspace(np.min(srez['TIME']), np.max(srez['TIME']))
+
+# Параметры распределения определяются при помощи функции fit на основе метода максимального правдоподобия
+params = sp.stats.lognorm.fit(srez['TIME'])
+pdf = sp.stats.lognorm.pdf(x, *params)
+
+# Расчет критерия Колмогорова-Смирнова и хи-квадрат
+ks = sp.stats.kstest(srez['TIME'], 'lognorm', params, N=100)
+chi2 = sp.stats.chisquare(srez['TIME'])
+print(ks)
+print(chi2)
+
+# Построение квантильного биплота для эмпирического и теоретического (логнормального) распределения
+
+# Расчет квантилей
+percs = np.linspace(0, 100, 21)
+qn_first = np.percentile(srez['TIME'], percs)
+qn_lognorm = sp.stats.lognorm.ppf(percs / 100.0, *params)
+
+# Построение квантильного биплота
+plt.figure(figsize=(10, 10))
+plt.plot(qn_first, qn_lognorm, ls="", marker="o", markersize=6)
+plt.plot(x, x, color="k", ls="--")
+plt.xlim(0, 100)
+plt.ylim(0, 100)
+plt.xlabel(f'Эмпирическое распределение')
+plt.ylabel('Теоретическое (логнормальное) распределение')
+plt.show()
 
 
