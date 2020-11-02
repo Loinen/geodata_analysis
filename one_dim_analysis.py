@@ -15,6 +15,14 @@ from scipy.stats import kde
 import seaborn as sns
 from math import sqrt
 
+# median absolute deviation
+def mad(df):
+    # параметр для логнормального распределения
+    sigma = 1.2
+    k = sp.stats.lognorm.ppf(3 / 4., s=sigma)
+    median = df.median()
+    return k * np.median(np.fabs(df - median))
+
 
 # Берем одну станцию, со средней температурой для каждого месяца в году
 cols = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -42,41 +50,22 @@ print("Temperature variances for each month")
 print(tb_3cols_var)
 
 # непараметрические оценки - 2 - ядерные оценки
-# Посчитаем альфа и бета
-alpha_mom = tb_3cols_mean ** 2 / tb_3cols_var
-beta_mom = tb_3cols_var / tb_3cols_mean
-yan_avg_temp = tb_3cols['Apr'].tolist()
-plt.hist(sorted(yan_avg_temp), bins='auto', density=True)
-density = kde.gaussian_kde(sorted(yan_avg_temp))
-lin = np.linspace(min(yan_avg_temp), max(yan_avg_temp))
-# temp_grid = np.linspace(min(yan_avg_temp), max(yan_avg_temp), 10)
-# tb_3cols.Oct.hist(bins='auto', density=True)
-# plt.plot(yan_avg_temp, density(yan_avg_temp))
-# plt.show()
-fig, ax = plt.subplots()
-plt.title("apr hist")
-plt.plot(lin, gamma.pdf(lin, alpha_mom[0], beta_mom[0]))
-plt.show()
-fig.savefig('apr histogram')
+
+may_avg_temp = tb_3cols['May'].tolist()
 
 fig, ax = plt.subplots()
-axs = tb_3cols.hist(bins=15, density=True, figsize=(12, 8), sharex=True, sharey=True, grid=False)
-for ax in axs.ravel():
-    m = ax.get_title()
-    x = np.linspace(*ax.get_xlim())
-    ax.plot(x, gamma.pdf(x, alpha_mom[m], beta_mom[m]))
-    label = 'alpha = {0:.2f}\nbeta = {1:.2f}'.format(alpha_mom[m], beta_mom[m])
-    ax.annotate(label, xy=(10, 0.2))
-plt.show()
-fig.savefig('gamma histogram')
+plt.hist(sorted(may_avg_temp), bins='auto', density=True)
 
-# пуассон
-plt.title("Пуассон")
-y = np.random.poisson(5, size=100)
-plt.hist(y, bins=12)
-plt.xlabel('y')
-plt.ylabel('Pr(y)')
+density = kde.gaussian_kde(sorted(may_avg_temp))
+lin = np.linspace(min(may_avg_temp), max(may_avg_temp))
+temp_grid = np.linspace(min(may_avg_temp), max(may_avg_temp), 100)
+plt.plot(temp_grid, density(temp_grid))
+plt.title("Kernel estimation")
 plt.show()
+fig.savefig('Kernel estimation')
+
+
+# оценка методом правдоподобия распределением Пуассона - ПЕРЕДЕЛАТЬ
 
 poisson_like = lambda x, lam: np.exp(-lam) * (lam**x) / (np.arange(x)+1).prod()
 
@@ -204,13 +193,7 @@ median = tb_3cols['TEMP'].median()
 trimmed_mean = sp.stats.trim_mean(tb_3cols['TEMP'], proportiontocut=0.1)
 
 
-# median absolute deviation
-def mad(df):
-    # параметр для логнормального распределения
-    sigma = 1.2
-    k = sp.stats.lognorm.ppf(3 / 4., s=sigma)
-    median = df.median()
-    return k * np.median(np.fabs(df - median))
+
 
 
 # Вычисление MAD-характеристики (Median Absolute Deviation)
@@ -243,16 +226,16 @@ print("95%% Доверительный интервал выборочного �
 plt.figure(figsize=(10, 8))
 plt.title("Построение гистограммы и ядерной оценки плотности")
 
-kernel = sp.stats.gaussian_kde(tb_3cols['TEMP'])
-min_amount, max_amount = tb_3cols['TEMP'].min(), tb_3cols['TEMP'].max()
-x = np.linspace(min_amount, max_amount, len(tb_3cols))
-kde_values = kernel(x)
+fig, ax = plt.subplots()
+plt.title("Построение гистограммы и ядерной оценки плотности")
 
-den = tb_3cols['TEMP'].tolist()
-density = kde.gaussian_kde(sorted(den))
-# norm_hist=True,
-sns.displot(tb_3cols['TEMP'], kde=False,  label=f'Средняя температура')
-plt.plot(x, kde_values)
+plt.hist(sorted(tb_3cols['TEMP']), bins='auto', density=True)
+
+density = kde.gaussian_kde(sorted(tb_3cols['TEMP']))
+kernel = sp.stats.gaussian_kde(tb_3cols['TEMP'])
+temp_grid = np.linspace(min(tb_3cols['TEMP']), max(tb_3cols['TEMP']), 100)
+plt.plot(temp_grid, density(temp_grid))
+
 plt.show()
 
 # fig, ax = plt.subplots()
