@@ -67,6 +67,7 @@ if __name__ == "__main__":
     tb_3cols.index = tb_3cols.DATE
     tb_3cols.drop('DATE', axis=1, inplace=True)
     tb_3cols.hist()  # похоже, что у str есть пропуски
+    # 9999.9 - пропуск
 
     # Тут мы указываем год для каждого показания
     tb_2cols = tb_3cols[['TEMP']]
@@ -106,7 +107,7 @@ if __name__ == "__main__":
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
-    for y in range(1990, 2021):
+    for y in range(1990, 2020):
         tb_3cols = tb_2cols[tb_2cols['YEAR'] == y]
         mean = tb_3cols['TEMP'].mean()
         var = tb_3cols['TEMP'].var()
@@ -158,7 +159,7 @@ if __name__ == "__main__":
     years = pd.concat([pd.DataFrame(x[1].values) for x in groups], axis=1)
     years = pd.DataFrame(years)
     print(years)
-    years.columns = range(1, 31)
+    years.columns = range(0, 30)
     years.boxplot()
     plt.show()
     fig.savefig('Ящик с усами.png')
@@ -217,10 +218,18 @@ if __name__ == "__main__":
     # Построение квантильного биплота для эмпирического и теоретического (логнормального) распределения
     # Расчет квантилей
     percs = np.linspace(0, 100, 21)
-    qn_first = np.percentile(srez['TEMP'], percs)
+    qn_first = np.percentile(srez['TEMP'], percs)  # 2005
     qn_lognorm = sp.stats.lognorm.ppf(percs / 100.0, *params)
 
+    # воно не робiт, я пытався
+    args_0 = (10, 30, 60, 30, 1, 1)
+    params, cov = optimize.curve_fit(estimation_func, x, x, args_0)
+    qn_test = estimation_func(percs, *params)
+    print(qn_test)
+    print('first', qn_first, 'lognorm', qn_lognorm)
+
     # Построение квантильного биплота
+
     plt.figure(figsize=(12, 12))
     plt.title('QQ-plot2')
     plt.plot(qn_first, qn_lognorm, ls="", marker="o", markersize=6)
@@ -231,7 +240,8 @@ if __name__ == "__main__":
     plt.ylabel('Теоретическое (логнормальное) распределение')
     plt.show()
 
-    print(qn_first, qn_second, qn_lognorm)
+
+
 
 
 
