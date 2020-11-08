@@ -47,8 +47,12 @@ def conf_intervals(data, qn):
     conf_q25 = norm_q95 * sigma25
     conf_q50 = norm_q95 * sigma50
     conf_q75 = norm_q95 * sigma75
+    conf = list()
+    conf.append(conf_q25[0])
+    conf.append(conf_q50[0])
+    conf.append(conf_q75[0])
 
-    return [conf_q25, conf_q50, conf_q75]
+    return conf
 
 
 if __name__ == "__main__":
@@ -57,6 +61,7 @@ if __name__ == "__main__":
     tb_3cols_all = pd.read_csv("data/data_spb.csv", index_col=0, na_values='NA',
                                usecols=['STATION', 'DATE', 'TEMP', 'STP'])
     tb_3cols = tb_3cols_all.loc[26063099999]
+    # tb_3cols.TEMP = round(((tb_3cols.TEMP - 32) / 1.8), 2)  Цельсии
     tb_3cols = tb_3cols[['DATE', 'TEMP', 'STP']]
     tb_3cols.reset_index(drop=True, inplace=True)
     tb_3cols.index = tb_3cols.DATE
@@ -72,13 +77,13 @@ if __name__ == "__main__":
         srez = tb_2cols.loc[m1:m2]
         col1 = np.full(len(srez), y)
         year_values = np.hstack([year_values, col1])
-    print(year_values, len(year_values), len(tb_2cols))
     tb_2cols['YEAR'] = year_values
 
     # step 2a, 4, 5
     # гистограмма и непараметрическая оценка
     fig, ax = plt.subplots()
-
+    # если хочется посмотреть по годам, можно цикл сделать
+    # tb_3cols = tb_2cols[tb_2cols['YEAR'] == 2003]
     y, x, _ = hist(tb_3cols['TEMP'].tolist(), 100, alpha=.3, label='data', density=True)
     density = kde.gaussian_kde(sorted(tb_3cols['TEMP']))
     kernel = sp.stats.gaussian_kde(tb_3cols['TEMP'])
@@ -101,40 +106,42 @@ if __name__ == "__main__":
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
-    mean = tb_3cols['TEMP'].mean()
-    var = tb_3cols['TEMP'].var()
-    std = tb_3cols['TEMP'].std()
-    median = tb_3cols['TEMP'].median()
+    for y in range(1990, 2021):
+        tb_3cols = tb_2cols[tb_2cols['YEAR'] == y]
+        mean = tb_3cols['TEMP'].mean()
+        var = tb_3cols['TEMP'].var()
+        std = tb_3cols['TEMP'].std()
+        median = tb_3cols['TEMP'].median()
 
-    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
-    trimmed_mean = sp.stats.trim_mean(tb_3cols['TEMP'], proportiontocut=0.1)
+        # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
+        trimmed_mean = sp.stats.trim_mean(tb_3cols['TEMP'], proportiontocut=0.1)
+        # Вычисление MAD-характеристики (Median Absolute Deviation)
+        mad_value = mad(tb_3cols['TEMP'])
+        # выборочное среднее, СКО, медиана, доверительные интервалы
+        print("year = ", y)
+        print(
+            f'Средняя температура Фаренгейт: среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
+            f'медиана = {int(median)}, усеченное среднее {int(trimmed_mean)}, MAD = {int(mad_value)}')
 
-    # Вычисление MAD-характеристики (Median Absolute Deviation)
-    mad_value = mad(tb_3cols['TEMP'])
-    # выборочное среднее, СКО, медиана, доверительные интервалы
-    print(
-        f'Средняя температура Фаренгейт: среднее = {int(mean)}, дисперсия = {int(var)}, СКО = {int(std)},\n'
-        f'медиана = {int(median)}, усеченное среднее {int(trimmed_mean)}, MAD = {int(mad_value)}')
+        # Расчет 95% доверительного интервала для выборочного среднего
+        norm_q95 = sp.stats.norm.ppf(0.95)
+        mean_conf = norm_q95 * std / np.sqrt(len(tb_3cols))
 
-    # Расчет 95% доверительного интервала для выборочного среднего
-    norm_q95 = sp.stats.norm.ppf(0.95)
-    mean_conf = norm_q95 * std / np.sqrt(len(tb_3cols))
+        # Расчет 95% доверительных интервалов для дисперсии и СКО
+        chi2_q95_left = sp.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(tb_3cols) - 1)
+        chi2_q95_right = sp.stats.chi2.ppf(0.05 / 2.0, df=len(tb_3cols) - 1)
 
-    # Расчет 95% доверительных интервалов для дисперсии и СКО
-    chi2_q95_left = sp.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(tb_3cols) - 1)
-    chi2_q95_right = sp.stats.chi2.ppf(0.05 / 2.0, df=len(tb_3cols) - 1)
+        var_conf_left = var * (len(tb_3cols) - 1) / chi2_q95_left
+        var_conf_right = var * (len(tb_3cols) - 1) / chi2_q95_right
+        std_conf_left = np.sqrt(var_conf_left)
+        std_conf_right = np.sqrt(var_conf_right)
 
-    var_conf_left = var * (len(tb_3cols) - 1) / chi2_q95_left
-    var_conf_right = var * (len(tb_3cols) - 1) / chi2_q95_right
-    std_conf_left = np.sqrt(var_conf_left)
-    std_conf_right = np.sqrt(var_conf_right)
-
-    # Вывод полученных значений
-    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
-    print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
-          % (var_conf_left, var_conf_right))
-    print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
-          % (std_conf_left, std_conf_right))
+        # Вывод полученных значений
+        print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+        print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
+              % (var_conf_left, var_conf_right))
+        print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
+              % (std_conf_left, std_conf_right))
 
     # step 3 ящик с усами
 
@@ -157,8 +164,8 @@ if __name__ == "__main__":
     fig.savefig('Ящик с усами.png')
 
     # step 6 Расчет квантилей
-    srez = tb_2cols.loc['2005-01-01':'2005-12-31']
-    srez2 = tb_2cols.loc['2009-01-01':'2009-12-31']
+    srez = tb_2cols[tb_2cols['YEAR'] == 2005]
+    srez2 = tb_2cols[tb_2cols['YEAR'] == 2009]
 
     percs = np.linspace(0, 100, 21)
     qn_first = np.percentile(srez['TEMP'], percs)
@@ -178,22 +185,14 @@ if __name__ == "__main__":
     plt.xlim([min_qn, 80])
     plt.ylim([min_qn, 80])
     plt.grid(True)
-    conf1 = list()
-    conf1.append(conf_first[0][0])
-    conf1.append(conf_first[1][0])
-    conf1.append(conf_first[2][0])
-    conf2 = list()
-    conf2.append(conf_second[0][0])
-    conf2.append(conf_second[1][0])
-    conf2.append(conf_second[2][0])
-    print('rr', conf1, conf2)
+
     # Добавление доверительных интервалов на график
     plt.errorbar(
         # [25%, 50%, 75%]
         [qn_first[5], qn_first[10], qn_first[15]],
         [qn_second[5], qn_second[10], qn_second[15]],
-        xerr=conf1,
-        yerr=conf2,
+        xerr=conf_first,
+        yerr=conf_second,
         ls='none',
         capsize=3,
         elinewidth=2
@@ -233,5 +232,6 @@ if __name__ == "__main__":
     plt.show()
 
     print(qn_first, qn_second, qn_lognorm)
+
 
 
