@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy as sp
 from scipy.stats import kde
-from scipy.stats import kde
 from scipy import optimize
 from pylab import *
 import random
@@ -56,6 +55,7 @@ if __name__ == "__main__":
     # step 6
     percs = np.linspace(0, 100, 21)
 
+    # сэмплирование рандомных значений из распределения
     dist = estimation_func(x, *lik_model.x)
     est_sample = random.choices(x, dist, k=200)
 
@@ -69,6 +69,14 @@ if __name__ == "__main__":
     plt.plot(qn_real, qn_estim, ls="", marker="o", markersize=6)
     plt.plot(x, x, color="k", ls="--")
     plt.show()
+
+    # step 7
+    temp_sample = random.choices(tb_3cols['TEMP'].tolist(), k=200)
+    ks = sp.stats.kstest(temp_sample, est_sample)
+    print(ks)
+
+    pearson = sp.stats.pearsonr(temp_sample, est_sample)
+    print(f"Критерий Пирсона {pearson}")
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
@@ -105,6 +113,8 @@ if __name__ == "__main__":
     tb_2cols.boxplot()
     plt.title("Box-and-whiskers")
     plt.show()
+
+
 
 
 
