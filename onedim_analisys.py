@@ -23,8 +23,19 @@ def likelihood_func(args, x):
 if __name__ == "__main__":
     # step 1
     tb_3cols_all = pd.read_csv("data/data_spb.csv", index_col=0, na_values='NA',
-                               usecols=['STATION', 'DATE', 'TEMP', 'STP'])
+                               usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP'])
+
     tb_3cols = tb_3cols_all.loc[26063099999]
+    # убираем станцию
+    tb_3cols.reset_index(drop=True, inplace=True)
+    tb_3cols.index = tb_3cols.DATE
+    tb_3cols.drop('DATE', axis=1, inplace=True)
+    pd.to_datetime(tb_3cols.index)
+
+    # пропуски
+    tb_3cols = tb_3cols.replace(9999.9, np.nan, regex=True)
+    tb_3cols = tb_3cols.replace({'WDSP': {999.9: np.nan}})
+    tb_3cols = tb_3cols.dropna(subset=['SLP', 'WDSP'])
 
     # step 2a, 4, 5
     # гистограмма и непараметрическая оценка
@@ -109,12 +120,18 @@ if __name__ == "__main__":
           % (std_conf_left, std_conf_right))
 
     # step 3
-    tb_2cols = tb_3cols[['DATE', 'TEMP']]
+    tb_2cols = tb_3cols[['TEMP']]
     tb_2cols.boxplot()
-    plt.title("Box-and-whiskers")
+    plt.title("TEMP Box-and-whiskers")
     plt.show()
 
+    tb_2cols = tb_3cols[['WDSP']]
+    tb_2cols.boxplot()
+    plt.title("WDSP Box-and-whiskers")
+    plt.show()
 
-
-
+    tb_2cols = tb_3cols[['SLP']]
+    tb_2cols.boxplot()
+    plt.title("SLP Box-and-whiskers")
+    plt.show()
 

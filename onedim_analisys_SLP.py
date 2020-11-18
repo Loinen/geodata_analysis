@@ -1,0 +1,103 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import scipy as sp
+from scipy.stats import kde
+from scipy import optimize
+from pylab import *
+import random
+from scipy.stats.distributions import norm
+
+if __name__ == "__main__":
+    # step 1
+    tb_3cols_all = pd.read_csv("data/data_spb.csv", index_col=0, na_values='NA',
+                               usecols=['STATION', 'DATE', 'SLP'])
+    tb_3cols = tb_3cols_all.loc[26063099999]
+    tb_3cols = tb_3cols.replace(9999.9, np.nan, regex=True)
+    tb_3cols = tb_3cols.dropna(subset=['SLP'])
+
+    # step 2a, 4, 5
+    # гистограмма и непараметрическая оценка
+    fig, ax = plt.subplots()
+
+    y, x, _ = hist(tb_3cols['SLP'].tolist(), 50, alpha=.3, label='data', density=True)
+
+    density = kde.gaussian_kde(sorted(tb_3cols['SLP']))
+    kernel = sp.stats.gaussian_kde(tb_3cols['SLP'])
+    temp_grid = np.linspace(min(tb_3cols['SLP']), max(tb_3cols['SLP']), 100)
+    plt.plot(temp_grid, density(temp_grid), label="Kernel estimation")
+
+    params = norm.fit(tb_3cols['SLP'])
+    plt.plot(x, norm.pdf(x, *params), 'm', lw=3, label="MLE")
+
+    x = (x[1:] + x[:-1]) / 2  # now x and y have the same size
+
+    params_ls, cov = optimize.curve_fit(norm.pdf, x, y, params)
+    plt.plot(x, norm.pdf(x, *params), color='y', label='Least squares estimation')
+
+    plt.legend()
+    plt.show()
+
+    # step 6
+    percs = np.linspace(0, 99, 21)
+    qn_real = np.percentile(tb_3cols['SLP'], percs)
+    qn_norm = sp.stats.norm.ppf(percs / 100.0, *params)
+    qn_norm = qn_norm[1:]
+    qn_real = qn_real[1:]
+
+    min_qn = np.min([qn_real.min(), qn_norm.min()])
+    max_qn = np.max([qn_real.max(), qn_norm.max()])
+    x = np.linspace(min_qn, max_qn)
+
+    plt.plot(x, x, color="k", ls="--")
+    plt.plot(qn_real, qn_norm, ls="", marker="o", markersize=6)
+    plt.xlabel('Эмпирическое распределение')
+    plt.ylabel('Гамма распределение')
+    plt.show()
+
+    # step 7
+    ks = sp.stats.kstest(tb_3cols['SLP'], 'norm', params)
+    print(ks)
+
+    SLP_sample = random.choices(tb_3cols['SLP'].tolist(), k=200)
+    dist = norm.pdf(x, *params)
+    est_sample = random.choices(x, dist, k=200)
+
+    pearson = sp.stats.pearsonr(SLP_sample, est_sample)
+    print(f"Критерий Пирсона {pearson}")
+
+    # step 2b
+    # Вычисление выборочного среднего, дисперсии, СКО, медианы
+    mean = tb_3cols['SLP'].mean()
+    var = tb_3cols['SLP'].var()
+    std = tb_3cols['SLP'].std()
+    median = tb_3cols['SLP'].median()
+
+    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
+    trimmed_mean = sp.stats.trim_mean(tb_3cols['SLP'], proportiontocut=0.1)
+
+    # Расчет 95% доверительного интервала для выборочного среднего
+    norm_q95 = sp.stats.norm.ppf(0.95)
+    mean_conf = norm_q95 * std / np.sqrt(len(tb_3cols))
+
+    # Расчет 95% доверительных интервалов для дисперсии и СКО
+    chi2_q95_left = sp.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(tb_3cols) - 1)
+    chi2_q95_right = sp.stats.chi2.ppf(0.05 / 2.0, df=len(tb_3cols) - 1)
+
+    var_conf_left = var * (len(tb_3cols) - 1) / chi2_q95_left
+    var_conf_right = var * (len(tb_3cols) - 1) / chi2_q95_right
+    std_conf_left = np.sqrt(var_conf_left)
+    std_conf_right = np.sqrt(var_conf_right)
+
+    # Вывод полученных значений
+    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+    print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
+          % (var_conf_left, var_conf_right))
+    print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
+          % (std_conf_left, std_conf_right))
+
+    # step 3
+    tb_2cols = tb_3cols[['DATE', 'SLP']]
+    tb_2cols.boxplot()
+    plt.title("Box-and-whiskers")
+    plt.show()
