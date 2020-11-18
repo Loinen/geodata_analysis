@@ -14,20 +14,21 @@ if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
                        usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP', 'STP'], index_col=0)
     data = data.loc[26063099999]
-    data = data.replace(9999.9, np.nan, regex=True)
+
     # TEMP - Mean temperature (.1 Fahrenheit)
-    # DEWP - Mean dew point (.1 Fahrenheit)
     # SLP - Mean sea level pressure for the day in millibars to tenths. Missing = 9999.9 (.1 mb)
-    # VISIB - Mean visibility (.1 miles)
     # WDSP – Mean wind speed (.1 knots)
-    # MXSPD - Maximum sustained wind speed (.1 knots)
-    # GUST - Maximum wind gust (.1 knots)
-    # MAX - Maximum temperature (.1 Fahrenheit)
-    # MIN - Minimum temperature (.1 Fahrenheit)
-    # PRCP - Precipitation amount (.01 inches)
-    # SNDP - Snow depth (.1 inches)
-    print(data.head())
-    print(data['SLP'])
+
+    # удаление пропущенных значений
+    data = data.replace(9999.9, np.nan, regex=True)
+    data = data.dropna(subset=['SLP'])
+
+    data.loc[data['STP'] > 900, 'STP'] = np.nan
+
+    data = data.dropna(subset=['STP'])
+
+    plt.scatter(data['DATE'], data['STP'])
+    plt.show()
 
     # пункт 4
     corr = data.corr()
@@ -38,21 +39,12 @@ if __name__ == "__main__":
     plt.show()
 
     # пункт 6
-    data = data.dropna(subset=['SLP'])
     X = data[['WDSP', 'TEMP', 'STP']]
     y = data[['SLP']]
 
-    # нормировка
-    # scaler = StandardScaler()
-    # X = pd.DataFrame(scaler.fit_transform(X))
-    # X.columns = ['SLP', 'VISIB', 'FRSHTT', 'LONGITUDE']
-    # scaler = StandardScaler()
-    # y = pd.DataFrame(scaler.fit_transform(y))
-    # y.columns = ['TEMP']
-
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-    # 2 степень. закомментить - будет линейная
+    # 2 степень
     poly = PolynomialFeatures(2)
     X_train = poly.fit_transform(X_train)
     poly = PolynomialFeatures(2)
