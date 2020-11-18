@@ -37,6 +37,63 @@ if __name__ == "__main__":
     plt.show()
 
     # step 6
-    percs = np.linspace(0, 100, 21)
+    percs = np.linspace(0, 99, 21)
     qn_real = np.percentile(tb_3cols['WDSP'], percs)
-    qn_gamma = sp.stats.lognorm.ppf(percs / 100.0, *params)
+    qn_gamma = sp.stats.gamma.ppf(percs / 100.0, *params)
+
+    min_qn = np.min([qn_real.min(), qn_gamma.min()])
+    max_qn = np.max([qn_real.max(), qn_gamma.max()])
+    x = np.linspace(min_qn, max_qn)
+
+    plt.plot(x, x, color="k", ls="--")
+    plt.plot(qn_real, qn_gamma, ls="", marker="o", markersize=6)
+    plt.xlabel('Эмпирическое распределение')
+    plt.ylabel('Гамма распределение')
+    plt.show()
+
+    # step 7
+    ks = sp.stats.kstest(tb_3cols['WDSP'], 'gamma', params)
+    print(ks)
+
+    wind_sample = random.choices(tb_3cols['WDSP'].tolist(), k=200)
+    dist = gamma.pdf(x, *params)
+    est_sample = random.choices(x, dist, k=200)
+
+    pearson = sp.stats.pearsonr(wind_sample, est_sample)
+    print(f"Критерий Пирсона {pearson}")
+
+    # step 2b
+    # Вычисление выборочного среднего, дисперсии, СКО, медианы
+    mean = tb_3cols['WDSP'].mean()
+    var = tb_3cols['WDSP'].var()
+    std = tb_3cols['WDSP'].std()
+    median = tb_3cols['WDSP'].median()
+
+    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
+    trimmed_mean = sp.stats.trim_mean(tb_3cols['WDSP'], proportiontocut=0.1)
+
+    # Расчет 95% доверительного интервала для выборочного среднего
+    norm_q95 = sp.stats.norm.ppf(0.95)
+    mean_conf = norm_q95 * std / np.sqrt(len(tb_3cols))
+
+    # Расчет 95% доверительных интервалов для дисперсии и СКО
+    chi2_q95_left = sp.stats.chi2.ppf((1 - 0.05 / 2.0), df=len(tb_3cols) - 1)
+    chi2_q95_right = sp.stats.chi2.ppf(0.05 / 2.0, df=len(tb_3cols) - 1)
+
+    var_conf_left = var * (len(tb_3cols) - 1) / chi2_q95_left
+    var_conf_right = var * (len(tb_3cols) - 1) / chi2_q95_right
+    std_conf_left = np.sqrt(var_conf_left)
+    std_conf_right = np.sqrt(var_conf_right)
+
+    # Вывод полученных значений
+    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+    print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
+          % (var_conf_left, var_conf_right))
+    print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
+          % (std_conf_left, std_conf_right))
+
+    # step 3
+    tb_2cols = tb_3cols[['DATE', 'WDSP']]
+    tb_2cols.boxplot()
+    plt.title("Box-and-whiskers")
+    plt.show()
