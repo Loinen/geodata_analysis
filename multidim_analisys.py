@@ -12,12 +12,12 @@ import statsmodels.api as sm
 
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
-                       usecols=['DATE', 'LATITUDE', 'LONGITUDE', 'TEMP', 'STP', 'VISIB',
-                                'WDSP', 'FRSHTT', 'DEWP', 'GUST'])
+                       usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP', 'STP'], index_col=0)
+    data = data.loc[26063099999]
+    data = data.replace(9999.9, np.nan, regex=True)
     # TEMP - Mean temperature (.1 Fahrenheit)
     # DEWP - Mean dew point (.1 Fahrenheit)
-    # SLP - Mean sea level pressure (.1 mb)
-    # STP - Mean station pressure (.1 mb)
+    # SLP - Mean sea level pressure for the day in millibars to tenths. Missing = 9999.9 (.1 mb)
     # VISIB - Mean visibility (.1 miles)
     # WDSP – Mean wind speed (.1 knots)
     # MXSPD - Maximum sustained wind speed (.1 knots)
@@ -26,15 +26,8 @@ if __name__ == "__main__":
     # MIN - Minimum temperature (.1 Fahrenheit)
     # PRCP - Precipitation amount (.01 inches)
     # SNDP - Snow depth (.1 inches)
-    # FRSHTT – Indicator for occurrence of:
-    # 		                        Fog
-    #                               Rain or Drizzle
-    #                               Snow or Ice Pellets
-    #                               Hail
-    #                               Thunder
-    #                               Tornado/Funnel Cloud
     print(data.head())
-    print(data['STP'])
+    print(data['SLP'])
 
     # пункт 4
     corr = data.corr()
@@ -45,14 +38,14 @@ if __name__ == "__main__":
     plt.show()
 
     # пункт 6
-    X = data[['LATITUDE', 'LONGITUDE', 'VISIB',
-                                'WDSP', 'DEWP', 'STP']]
-    y = data[['TEMP']]
+    data = data.dropna(subset=['SLP'])
+    X = data[['WDSP', 'TEMP', 'STP']]
+    y = data[['SLP']]
 
     # нормировка
     # scaler = StandardScaler()
     # X = pd.DataFrame(scaler.fit_transform(X))
-    # X.columns = ['STP', 'VISIB', 'FRSHTT', 'LONGITUDE']
+    # X.columns = ['SLP', 'VISIB', 'FRSHTT', 'LONGITUDE']
     # scaler = StandardScaler()
     # y = pd.DataFrame(scaler.fit_transform(y))
     # y.columns = ['TEMP']
