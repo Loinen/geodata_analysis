@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import statsmodels.api as sm
 
+
 # ковариация
 def calcWithinGroupsCovariance(variable1, variable2, groupvariable):
     levels = sorted(set(groupvariable))
@@ -31,6 +32,27 @@ def calcWithinGroupsCovariance(variable1, variable2, groupvariable):
     totallength = len(variable1)
     Covw /= totallength - numlevels
     return Covw
+
+
+def calcBetweenGroupsCovariance(variable1, variable2, groupvariable):
+    # find out how many values the group variable can take
+    levels = sorted(set(groupvariable))
+    numlevels = len(levels)
+    # calculate the grand means
+    variable1mean = np.mean(variable1)
+    variable2mean = np.mean(variable2)
+    # calculate the between-groups covariance
+    Covb = 0.0
+    for leveli in levels:
+        levelidata1 = variable1[groupvariable==leveli]
+        levelidata2 = variable2[groupvariable==leveli]
+        mean1 = np.mean(levelidata1)
+        mean2 = np.mean(levelidata2)
+        levelilength = len(levelidata1)
+        term1 = (mean1 - variable1mean) * (mean2 - variable2mean) * levelilength
+        Covb += term1
+    Covb /= numlevels - 1
+    return Covb
 
 
 if __name__ == "__main__":
@@ -67,11 +89,15 @@ if __name__ == "__main__":
     # пункт 2
     X = data[['WDSP', 'TEMP', 'STP']]
     y = data.SLP
-    X.apply(np.mean)
-    X.apply(np.std)
+    print(X.apply(np.mean))
+    print(X.apply(np.std))
     WTcov = calcWithinGroupsCovariance(X.WDSP, X.TEMP, y)
     WScov = calcWithinGroupsCovariance(X.WDSP, X.STP, y)
     TScov = calcWithinGroupsCovariance(X.TEMP, X.STP, y)
+    print("cov ws, wt, ts", WScov, WTcov, TScov)
+    WTcov = calcBetweenGroupsCovariance(X.WDSP, X.TEMP, y)
+    WScov = calcBetweenGroupsCovariance(X.WDSP, X.STP, y)
+    TScov = calcBetweenGroupsCovariance(X.TEMP, X.STP, y)
     print("cov ws, wt, ts", WScov, WTcov, TScov)
     # cov WithinGroups -0.008215964255887763 -7.180090867674784 0.7132029555332114
 
