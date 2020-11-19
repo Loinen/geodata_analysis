@@ -10,9 +10,35 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import statsmodels.api as sm
 
+# ковариация
+def calcWithinGroupsCovariance(variable1, variable2, groupvariable):
+    levels = sorted(set(groupvariable))
+    numlevels = len(levels)
+    Covw = 0.0
+    # get the covariance of variable 1 and variable 2 for each group:
+    for leveli in levels:
+        levelidata1 = variable1[groupvariable==leveli]
+        levelidata2 = variable2[groupvariable==leveli]
+        mean1 = np.mean(levelidata1)
+        mean2 = np.mean(levelidata2)
+        levelilength = len(levelidata1)
+        # get the covariance for this group:
+        term1 = 0.0
+        for levelidata1j, levelidata2j in zip(levelidata1, levelidata2):
+            term1 += (levelidata1j - mean1)*(levelidata2j - mean2)
+        Cov_groupi = term1 # covariance for this group
+        Covw += Cov_groupi
+    totallength = len(variable1)
+    Covw /= totallength - numlevels
+    return Covw
+
+
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
                        usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP', 'STP'], index_col=0)
+    # тут параметры с норм корреляцией(0,5) хотя бы с 1
+    #                    usecols=['STATION', 'DATE', 'GUST', 'SLP',
+    #                             'SNDP', 'STP', 'TEMP',  'WDSP'], index_col=0)
     data = data.loc[26063099999]
 
     # TEMP - Mean temperature (.1 Fahrenheit)
@@ -30,6 +56,25 @@ if __name__ == "__main__":
     plt.scatter(data['DATE'], data['STP'])
     plt.show()
 
+    # пункт 1
+    pd.plotting.scatter_matrix(data, diagonal="kde")
+    plt.tight_layout()
+    plt.show()
+    # нам это не нужно, нo выглядит красиво)
+    sns.lmplot("TEMP", "STP", data, hue="SLP", fit_reg=False)
+    plt.show()
+
+    # пункт 2
+    X = data[['WDSP', 'TEMP', 'STP']]
+    y = data.SLP
+    X.apply(np.mean)
+    X.apply(np.std)
+    WTcov = calcWithinGroupsCovariance(X.WDSP, X.TEMP, y)
+    WScov = calcWithinGroupsCovariance(X.WDSP, X.STP, y)
+    TScov = calcWithinGroupsCovariance(X.TEMP, X.STP, y)
+    print("cov ws, wt, ts", WScov, WTcov, TScov)
+    # cov WithinGroups -0.008215964255887763 -7.180090867674784 0.7132029555332114
+
     # пункт 4
     corr = data.corr()
     print(corr)
@@ -41,7 +86,6 @@ if __name__ == "__main__":
     # пункт 6
     X = data[['WDSP', 'TEMP', 'STP']]
     y = data[['SLP']]
-
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
     # 2 степень
