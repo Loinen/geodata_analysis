@@ -99,7 +99,12 @@ if __name__ == "__main__":
     WScov = calcBetweenGroupsCovariance(X.WDSP, X.STP, y)
     TScov = calcBetweenGroupsCovariance(X.TEMP, X.STP, y)
     print("cov ws, wt, ts", WScov, WTcov, TScov)
-    # cov WithinGroups -0.008215964255887763 -7.180090867674784 0.7132029555332114
+    # cov WithinGroups -0.008216 -7.18 0.713
+    # cov BetweenGroups -45.374 11.63 -345.646
+    X = [data['WDSP'], data['TEMP'], data['STP']]
+    sns.heatmap(np.cov(X), annot=True, fmt='g')
+    plt.show()
+    print(np.cov(X))
 
     # пункт 4
     corr = data.corr()

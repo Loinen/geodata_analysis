@@ -52,7 +52,7 @@ if __name__ == "__main__":
     plt.plot(x, x, color="k", ls="--")
     plt.plot(qn_real, qn_norm, ls="", marker="o", markersize=6)
     plt.xlabel('Эмпирическое распределение')
-    plt.ylabel('Гамма распределение')
+    plt.ylabel('Нормальное распределение')
     plt.show()
 
     # step 7
