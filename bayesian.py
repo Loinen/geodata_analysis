@@ -24,7 +24,7 @@ from pgmpy.base import DAG
 
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
-                       usecols=['STATION', 'TEMP', 'SLP', 'WDSP', 'STP'], index_col=0)
+                       usecols=['STATION', 'TEMP', 'SLP', 'WDSP', 'GUST', 'SNDP'], index_col=0)
     data = data.loc[26063099999]
 
     # TEMP - Mean temperature (.1 Fahrenheit)
@@ -34,8 +34,10 @@ if __name__ == "__main__":
     # удаление пропущенных значений
     data = data.replace(9999.9, np.nan, regex=True)
     data = data.dropna(subset=['SLP'])
-    data.loc[data['STP'] > 900, 'STP'] = np.nan
-    data = data.dropna(subset=['STP'])
+    data.loc[data['GUST'] > 990, 'GUST'] = np.nan
+    data.loc[data['SNDP'] > 990, 'SNDP'] = np.nan
+    data = data.dropna(subset=['GUST'])
+    data = data.dropna(subset=['SNDP'])
     data.reset_index(inplace=True, drop=True)
 
     # sns.displot(data['SLP'])
@@ -50,10 +52,10 @@ if __name__ == "__main__":
     print(data.head(10))
 
     transformed_data = copy(data)
-    est = KBinsDiscretizer(n_bins=4, encode='ordinal', strategy='kmeans')
-    data_discrete = est.fit_transform(data.values[:, 0:4])
+    est = KBinsDiscretizer(n_bins=3, encode='ordinal', strategy='kmeans')
+    data_discrete = est.fit_transform(data.values[:, 0:5])
     print(data_discrete)
-    transformed_data[['SLP', 'STP', 'TEMP', 'WDSP']] = data_discrete
+    transformed_data[['GUST', 'SLP', 'SNDP', 'TEMP', 'WDSP']] = data_discrete
 
     hc = HillClimbSearch(transformed_data, scoring_method=K2Score(transformed_data))
 
@@ -63,6 +65,7 @@ if __name__ == "__main__":
     G_K2.add_edges_from(best_model.edges())
     pos = nx.layout.circular_layout(G_K2)
     nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
+    plt.show()
 
     def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
         bn.fit(data)
