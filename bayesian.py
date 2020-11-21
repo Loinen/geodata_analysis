@@ -48,11 +48,10 @@ if __name__ == "__main__":
     # plt.show()
 
     print(data.head(10))
-    data = data[0:4]
 
     transformed_data = copy(data)
     est = KBinsDiscretizer(n_bins=4, encode='ordinal', strategy='kmeans')
-    data_discrete = est.fit_transform(data.values[:, 0:3])
+    data_discrete = est.fit_transform(data.values[:, 0:4])
     print(data_discrete)
     transformed_data[['SLP', 'STP', 'TEMP', 'WDSP']] = data_discrete
 
