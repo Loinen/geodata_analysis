@@ -86,11 +86,16 @@ if __name__ == "__main__":
     sns.lmplot("TEMP", "STP", data, hue="SLP", fit_reg=False)
     plt.show()
 
-    # пункт 2
+    # пункт 2,3
     X = data[['WDSP', 'TEMP', 'STP']]
     y = data.SLP
-    print(X.apply(np.mean))
-    print(X.apply(np.std))
+    # Мат ожидание
+    print("mean", X.apply(np.mean))
+    print("std", X.apply(np.std))
+    means = data[['WDSP', 'TEMP', 'STP', 'SLP']].groupby('SLP').mean()
+    print("conditional mean\n", means)
+
+    # Условная дисперсия
     WTcov = calcWithinGroupsCovariance(X.WDSP, X.TEMP, y)
     WScov = calcWithinGroupsCovariance(X.WDSP, X.STP, y)
     TScov = calcWithinGroupsCovariance(X.TEMP, X.STP, y)
@@ -101,6 +106,8 @@ if __name__ == "__main__":
     print("cov ws, wt, ts", WScov, WTcov, TScov)
     # cov WithinGroups -0.008216 -7.18 0.713
     # cov BetweenGroups -45.374 11.63 -345.646
+
+    # Дисперсия
     X = [data['WDSP'], data['TEMP'], data['STP']]
     sns.heatmap(np.cov(X), annot=True, fmt='g')
     plt.show()
