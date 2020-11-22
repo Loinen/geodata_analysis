@@ -113,6 +113,8 @@ if __name__ == "__main__":
     print(mrv.apply(np.mean))
     print("std")
     print(mrv.apply(np.std))
+    print("var")
+    print(mrv.apply(np.var))
 
     # пункт 3
 
