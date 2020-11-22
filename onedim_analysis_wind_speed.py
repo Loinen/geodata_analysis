@@ -55,9 +55,13 @@ if __name__ == "__main__":
     ks = sp.stats.kstest(tb_3cols['WDSP'], 'gamma', params)
     print(ks)
 
-    wind_sample = random.choices(tb_3cols['WDSP'].tolist(), k=200)
+    wind_sample = np.random.choice(tb_3cols['WDSP'].tolist(), size=200, replace=True)
+
+    # сэмплирование рандомных значений из распределения
     dist = gamma.pdf(x, *params)
-    est_sample = random.choices(x, dist, k=200)
+    dist = dist / dist.sum()
+    est_sample = np.random.choice(x, p=dist, size=200, replace=True)
+    print(f"сэмлирование значений из распределения скорости ветра\n", est_sample)
 
     pearson = sp.stats.pearsonr(wind_sample, est_sample)
     print(f"Критерий Пирсона {pearson}")

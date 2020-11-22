@@ -63,7 +63,9 @@ if __name__ == "__main__":
 
     # сэмплирование рандомных значений из распределения
     dist = estimation_func(x, *lik_model.x)
-    est_sample = random.choices(x, dist, k=200)
+    dist = dist / dist.sum()
+    est_sample = np.random.choice(x, p=dist, size=200, replace=True)
+    print(f"сэмлирование значений из распределения температуры\n", est_sample)
 
     qn_real = np.percentile(tb_3cols['TEMP'], percs)
     qn_estim = np.percentile(est_sample, percs)
