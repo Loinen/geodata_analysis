@@ -1,6 +1,8 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
@@ -9,55 +11,15 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
 import numpy as np
 import statsmodels.api as sm
-
-
-# ковариация
-def calcWithinGroupsCovariance(variable1, variable2, groupvariable):
-    levels = sorted(set(groupvariable))
-    numlevels = len(levels)
-    Covw = 0.0
-    # get the covariance of variable 1 and variable 2 for each group:
-    for leveli in levels:
-        levelidata1 = variable1[groupvariable==leveli]
-        levelidata2 = variable2[groupvariable==leveli]
-        mean1 = np.mean(levelidata1)
-        mean2 = np.mean(levelidata2)
-        levelilength = len(levelidata1)
-        # get the covariance for this group:
-        term1 = 0.0
-        for levelidata1j, levelidata2j in zip(levelidata1, levelidata2):
-            term1 += (levelidata1j - mean1)*(levelidata2j - mean2)
-        Cov_groupi = term1 # covariance for this group
-        Covw += Cov_groupi
-    totallength = len(variable1)
-    Covw /= totallength - numlevels
-    return Covw
-
-
-def calcBetweenGroupsCovariance(variable1, variable2, groupvariable):
-    # find out how many values the group variable can take
-    levels = sorted(set(groupvariable))
-    numlevels = len(levels)
-    # calculate the grand means
-    variable1mean = np.mean(variable1)
-    variable2mean = np.mean(variable2)
-    # calculate the between-groups covariance
-    Covb = 0.0
-    for leveli in levels:
-        levelidata1 = variable1[groupvariable==leveli]
-        levelidata2 = variable2[groupvariable==leveli]
-        mean1 = np.mean(levelidata1)
-        mean2 = np.mean(levelidata2)
-        levelilength = len(levelidata1)
-        term1 = (mean1 - variable1mean) * (mean2 - variable2mean) * levelilength
-        Covb += term1
-    Covb /= numlevels - 1
-    return Covb
+from scipy.stats import kde
+from scipy import stats
+from scipy import interpolate
+from scipy.stats import norm
 
 
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
-                       usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP', 'STP'], index_col=0)
+                       usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP'], index_col=0)
     # тут параметры с норм корреляцией(0,5) хотя бы с 1
     #                    usecols=['STATION', 'DATE', 'GUST', 'SLP',
     #                             'SNDP', 'STP', 'TEMP',  'WDSP'], index_col=0)
@@ -71,47 +33,102 @@ if __name__ == "__main__":
     data = data.replace(9999.9, np.nan, regex=True)
     data = data.dropna(subset=['SLP'])
 
-    data.loc[data['STP'] > 900, 'STP'] = np.nan
+    # data.loc[data['STP'] > 900, 'STP'] = np.nan
+    # data = data.dropna(subset=['STP'])
 
-    data = data.dropna(subset=['STP'])
-
-    plt.scatter(data['DATE'], data['STP'])
-    plt.show()
 
     # пункт 1
-    pd.plotting.scatter_matrix(data, diagonal="kde")
-    plt.tight_layout()
-    plt.show()
-    # нам это не нужно, нo выглядит красиво)
-    sns.lmplot("TEMP", "STP", data, hue="SLP", fit_reg=False)
+    # гистограммы
+    fig, ax = plt.subplots()
+    plt.hist2d(data['TEMP'], data['WDSP'], density=True, bins=20, cmap=cm.cividis)
+    ax.set_xlabel('температура')
+    ax.set_ylabel('скорость ветра')
+    plt.colorbar()
     plt.show()
 
-    # пункт 2,3
-    X = data[['WDSP', 'TEMP', 'STP']]
-    y = data.SLP
-    # Мат ожидание
-    print("mean", X.apply(np.mean))
-    print("std", X.apply(np.std))
-    means = data[['WDSP', 'TEMP', 'STP', 'SLP']].groupby('SLP').mean()
-    print("conditional mean\n", means)
+    fig, ax = plt.subplots()
+    plt.hist2d(data['TEMP'], data['SLP'], density=True, bins=20, cmap=cm.cividis)
+    ax.set_xlabel('температура')
+    ax.set_ylabel('давление')
+    plt.colorbar()
+    plt.show()
+
+    fig, ax = plt.subplots()
+    plt.hist2d(data['SLP'], data['WDSP'], density=True, bins=20, cmap=cm.cividis)
+    ax.set_xlabel('давление')
+    ax.set_ylabel('скорость ветра')
+    plt.colorbar()
+    plt.show()
+
+    # ядерная оценка
+    density = stats.gaussian_kde((data['TEMP'], data['WDSP'], data['SLP']))
+
+    temp_grid = np.linspace(min(data['TEMP']), max(data['TEMP']), 20)
+    wind_grid = np.linspace(min(data['WDSP']), max(data['WDSP']), 20)
+    pres_grid = np.linspace(min(data['SLP']), max(data['SLP']), 20)
+
+    density_grid_tw = []
+    for i, wind in enumerate(wind_grid):
+        density_grid_tw.append([density((j, wind, data['SLP'].mean()))[0] for j in temp_grid])
+
+    density_grid_tw = np.array(density_grid_tw)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    temp_grid_mesh, wind_grid_mesh = np.meshgrid(temp_grid, wind_grid)
+    surf = ax.plot_surface(wind_grid_mesh, temp_grid_mesh, density_grid_tw, cmap=cm.cividis)
+    fig.colorbar(surf)
+    ax.set_ylabel('температура')
+    ax.set_xlabel('скорость ветра')
+    plt.show()
+
+    density_grid_pw = []
+    for i, wind in enumerate(wind_grid):
+        density_grid_pw.append([density((data['TEMP'].mean(), wind, j))[0] for j in pres_grid])
+
+    density_grid_pw = np.array(density_grid_pw)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    pres_grid_mesh, wind_grid_mesh = np.meshgrid(pres_grid, wind_grid)
+    surf = ax.plot_surface(wind_grid_mesh, pres_grid_mesh, density_grid_pw, cmap=cm.cividis)
+    fig.colorbar(surf)
+    ax.set_ylabel('давление')
+    ax.set_xlabel('скорость ветра')
+    plt.show()
+
+    # pd.plotting.scatter_matrix(data, diagonal="kde")
+    # plt.tight_layout()
+    # plt.show()
+    # нам это не нужно, нo выглядит красиво)
+    # sns.lmplot("TEMP", "STP", data, hue="SLP", fit_reg=False)
+    # plt.show()
+
+    # пункт 2
+    mrv = data[['WDSP', 'TEMP', 'SLP']]
+    # Мат ожидание и дисперсия
+    print("mean")
+    print(mrv.apply(np.mean))
+    print("std")
+    print(mrv.apply(np.std))
+
+    # пункт 3
+
+    means = data[['WDSP', 'TEMP', 'SLP']].groupby('SLP').mean()
+    # print("conditional mean\n", means)
+
+    plt.scatter(means.index, means['WDSP'])
+    plt.title("мат ожидание скорости ветра при фиксированных значениях давления")
+    plt.show()
+
+    plt.scatter(means.index, means['TEMP'])
+    plt.title("мат ожидание температуры при фиксированных значениях давления")
+    plt.show()
 
     # Условная дисперсия
-    WTcov = calcWithinGroupsCovariance(X.WDSP, X.TEMP, y)
-    WScov = calcWithinGroupsCovariance(X.WDSP, X.STP, y)
-    TScov = calcWithinGroupsCovariance(X.TEMP, X.STP, y)
-    print("cov ws, wt, ts", WScov, WTcov, TScov)
-    WTcov = calcBetweenGroupsCovariance(X.WDSP, X.TEMP, y)
-    WScov = calcBetweenGroupsCovariance(X.WDSP, X.STP, y)
-    TScov = calcBetweenGroupsCovariance(X.TEMP, X.STP, y)
-    print("cov ws, wt, ts", WScov, WTcov, TScov)
-    # cov WithinGroups -0.008216 -7.18 0.713
-    # cov BetweenGroups -45.374 11.63 -345.646
 
-    # Дисперсия
-    X = [data['WDSP'], data['TEMP'], data['STP']]
-    sns.heatmap(np.cov(X), annot=True, fmt='g')
-    plt.show()
-    print(np.cov(X))
 
     # пункт 4
     corr = data.corr()
@@ -122,11 +139,10 @@ if __name__ == "__main__":
     plt.show()
 
     # пункт 6
-    X = data[['WDSP', 'TEMP', 'STP']]
+    X = data[['WDSP', 'TEMP']]
     y = data[['SLP']]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-    # 2 степень
     poly = PolynomialFeatures(2)
     X_train = poly.fit_transform(X_train)
     poly = PolynomialFeatures(2)
@@ -155,6 +171,7 @@ if __name__ == "__main__":
     y1 = np.array(y)
     y2 = np.array(y_pred_all)
     y_diff = y1[:, 0] - y2[:, 0]
+    # plt.hist(y_diff, 30, alpha=.3, density=True)
     sns.distplot(y_diff, kde=False)
     plt.show()
 
