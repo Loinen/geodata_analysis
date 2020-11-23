@@ -39,6 +39,11 @@ if __name__ == "__main__":
 
     # пункт 1
     # гистограммы
+
+    pd.plotting.scatter_matrix(data, diagonal="kde")
+    plt.tight_layout()
+    plt.show()
+
     fig, ax = plt.subplots()
     plt.hist2d(data['TEMP'], data['WDSP'], density=True, bins=20, cmap=cm.cividis)
     ax.set_xlabel('температура')
