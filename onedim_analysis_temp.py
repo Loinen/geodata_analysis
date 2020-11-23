@@ -64,8 +64,17 @@ if __name__ == "__main__":
     # сэмплирование рандомных значений из распределения
     dist = estimation_func(x, *lik_model.x)
     dist = dist / dist.sum()
-    est_sample = np.random.choice(x, p=dist, size=200, replace=True)
+    est_sample = np.random.choice(x, p=dist, size=500, replace=True)
     print(f"сэмлирование значений из распределения температуры\n", est_sample)
+
+    plt.plot(temp_grid, estimation_func(temp_grid, *lik_model.x), color='red', label='MLE')
+    plt.plot(temp_grid, density(temp_grid), label="Kernel estimation")
+    density = kde.gaussian_kde(sorted(est_sample))
+    grid = np.linspace(min(est_sample), max(est_sample), 100)
+    plt.plot(grid, density(grid), label="Sample")
+
+    plt.legend()
+    plt.show()
 
     qn_real = np.percentile(tb_3cols['TEMP'], percs)
     qn_estim = np.percentile(est_sample, percs)

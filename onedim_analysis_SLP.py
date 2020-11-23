@@ -67,6 +67,15 @@ if __name__ == "__main__":
     est_sample = np.random.choice(x, p=dist, size=200, replace=True)
     print(f"сэмлирование значений из распределения давления\n", est_sample)
 
+    plt.plot(x, norm.pdf(x, *params), 'm', lw=3, label="MLE")
+    plt.plot(x, density(x), label="Kernel estimation")
+    density = kde.gaussian_kde(sorted(est_sample))
+    grid = np.linspace(min(est_sample), max(est_sample), 100)
+    plt.plot(grid, density(grid), label="Sample")
+
+    plt.legend()
+    plt.show()
+
     pearson = sp.stats.pearsonr(SLP_sample, est_sample)
     print(f"Критерий Пирсона {pearson}")
 

@@ -55,13 +55,22 @@ if __name__ == "__main__":
     ks = sp.stats.kstest(tb_3cols['WDSP'], 'gamma', params)
     print(ks)
 
-    wind_sample = np.random.choice(tb_3cols['WDSP'].tolist(), size=200, replace=True)
+    wind_sample = np.random.choice(tb_3cols['WDSP'].tolist(), size=400, replace=True)
 
     # сэмплирование рандомных значений из распределения
     dist = gamma.pdf(x, *params)
     dist = dist / dist.sum()
     est_sample = np.random.choice(x, p=dist, size=200, replace=True)
     print(f"сэмлирование значений из распределения скорости ветра\n", est_sample)
+
+    plt.plot(x, gamma.pdf(x, *params), 'm', lw=3, label="MLE")
+    plt.plot(x, density(x), label="Kernel estimation")
+    density = kde.gaussian_kde(sorted(est_sample))
+    grid = np.linspace(min(est_sample), max(est_sample), 100)
+    plt.plot(grid, density(grid), label="Sample")
+
+    plt.legend()
+    plt.show()
 
     pearson = sp.stats.pearsonr(wind_sample, est_sample)
     print(f"Критерий Пирсона {pearson}")
