@@ -59,13 +59,12 @@ if __name__ == "__main__":
     ks = sp.stats.kstest(tb_3cols['SLP'], 'norm', params)
     print(ks)
 
-    SLP_sample = np.random.choice(tb_3cols['SLP'].tolist(), size=200, replace=True)
+    SLP_sample = np.random.choice(tb_3cols['SLP'].tolist(), size=2000, replace=True)
 
     # сэмплирование рандомных значений из распределения
     dist = norm.pdf(x, *params)
     dist = dist / dist.sum()
-    est_sample = np.random.choice(x, p=dist, size=200, replace=True)
-    print(f"сэмлирование значений из распределения давления\n", est_sample)
+    est_sample = np.random.choice(x, p=dist, size=2000, replace=True)
 
     plt.plot(x, norm.pdf(x, *params), 'm', lw=3, label="MLE")
     plt.plot(x, density(x), label="Kernel estimation")
@@ -76,8 +75,8 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    pearson = sp.stats.pearsonr(SLP_sample, est_sample)
-    print(f"Критерий Пирсона {pearson}")
+    es_test = sp.stats.epps_singleton_2samp(SLP_sample, est_sample)
+    print(es_test)
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
@@ -85,9 +84,6 @@ if __name__ == "__main__":
     var = tb_3cols['SLP'].var()
     std = tb_3cols['SLP'].std()
     median = tb_3cols['SLP'].median()
-
-    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
-    trimmed_mean = sp.stats.trim_mean(tb_3cols['SLP'], proportiontocut=0.1)
 
     # Расчет 95% доверительного интервала для выборочного среднего
     norm_q95 = sp.stats.norm.ppf(0.95)
@@ -103,7 +99,8 @@ if __name__ == "__main__":
     std_conf_right = np.sqrt(var_conf_right)
 
     # Вывод полученных значений
-    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+    print("95%% Доверительный интервал выборочного среднего: (%0.3f; %0.3f)"
+          % (mean - mean_conf, mean + mean_conf))
     print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
           % (var_conf_left, var_conf_right))
     print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"

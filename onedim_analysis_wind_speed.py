@@ -55,13 +55,12 @@ if __name__ == "__main__":
     ks = sp.stats.kstest(tb_3cols['WDSP'], 'gamma', params)
     print(ks)
 
-    wind_sample = np.random.choice(tb_3cols['WDSP'].tolist(), size=400, replace=True)
+    wind_sample = np.random.choice(tb_3cols['WDSP'].tolist(), size=3000, replace=True)
 
     # сэмплирование рандомных значений из распределения
     dist = gamma.pdf(x, *params)
     dist = dist / dist.sum()
-    est_sample = np.random.choice(x, p=dist, size=200, replace=True)
-    print(f"сэмлирование значений из распределения скорости ветра\n", est_sample)
+    est_sample = np.random.choice(x, p=dist, size=3000, replace=True)
 
     plt.plot(x, gamma.pdf(x, *params), 'm', lw=3, label="MLE")
     plt.plot(x, density(x), label="Kernel estimation")
@@ -72,8 +71,8 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    pearson = sp.stats.pearsonr(wind_sample, est_sample)
-    print(f"Критерий Пирсона {pearson}")
+    es_test = sp.stats.epps_singleton_2samp(wind_sample, est_sample)
+    print(es_test)
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
@@ -81,9 +80,6 @@ if __name__ == "__main__":
     var = tb_3cols['WDSP'].var()
     std = tb_3cols['WDSP'].std()
     median = tb_3cols['WDSP'].median()
-
-    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
-    trimmed_mean = sp.stats.trim_mean(tb_3cols['WDSP'], proportiontocut=0.1)
 
     # Расчет 95% доверительного интервала для выборочного среднего
     norm_q95 = sp.stats.norm.ppf(0.95)
@@ -99,7 +95,8 @@ if __name__ == "__main__":
     std_conf_right = np.sqrt(var_conf_right)
 
     # Вывод полученных значений
-    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+    print("95%% Доверительный интервал выборочного среднего: (%0.3f; %0.3f)"
+          % (mean - mean_conf, mean + mean_conf))
     print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
           % (var_conf_left, var_conf_right))
     print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"

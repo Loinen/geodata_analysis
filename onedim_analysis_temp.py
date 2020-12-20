@@ -64,8 +64,7 @@ if __name__ == "__main__":
     # сэмплирование рандомных значений из распределения
     dist = estimation_func(x, *lik_model.x)
     dist = dist / dist.sum()
-    est_sample = np.random.choice(x, p=dist, size=500, replace=True)
-    print(f"сэмлирование значений из распределения температуры\n", est_sample)
+    est_sample = np.random.choice(x, p=dist, size=2000, replace=True)
 
     plt.plot(temp_grid, estimation_func(temp_grid, *lik_model.x), color='red', label='MLE')
     plt.plot(temp_grid, density(temp_grid), label="Kernel estimation")
@@ -88,12 +87,12 @@ if __name__ == "__main__":
     plt.show()
 
     # step 7
-    temp_sample = random.choices(tb_3cols['TEMP'].tolist(), k=200)
-    ks = sp.stats.kstest(temp_sample, est_sample)
+    temp_sample = random.choices(tb_3cols['TEMP'].tolist(), k=2000)
+    ks = sp.stats.ks_2samp(temp_sample, est_sample)
     print(ks)
 
-    pearson = sp.stats.pearsonr(temp_sample, est_sample)
-    print(f"Критерий Пирсона {pearson}")
+    es_test = sp.stats.epps_singleton_2samp(temp_sample, est_sample)
+    print(es_test)
 
     # step 2b
     # Вычисление выборочного среднего, дисперсии, СКО, медианы
@@ -101,9 +100,6 @@ if __name__ == "__main__":
     var = tb_3cols['TEMP'].var()
     std = tb_3cols['TEMP'].std()
     median = tb_3cols['TEMP'].median()
-
-    # Вычисление усеченного среднего, с усечением 10% наибольших и наименьших значений
-    trimmed_mean = sp.stats.trim_mean(tb_3cols['TEMP'], proportiontocut=0.1)
 
     # Расчет 95% доверительного интервала для выборочного среднего
     norm_q95 = sp.stats.norm.ppf(0.95)
@@ -119,7 +115,8 @@ if __name__ == "__main__":
     std_conf_right = np.sqrt(var_conf_right)
 
     # Вывод полученных значений
-    print("Выборочное среднее: %0.3f +/- %0.3f" % (mean, mean_conf))
+    print("95%% Доверительный интервал выборочного среднего: (%0.3f; %0.3f)"
+          % (mean-mean_conf, mean+mean_conf))
     print("95%% Доверительный интервал выборочной дисперсии : (%0.3f; %0.3f)"
           % (var_conf_left, var_conf_right))
     print("95%% Доверительный интервал выборочного СКО: (%0.3f; %0.3f)"
