@@ -1,49 +1,36 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
 import numpy as np
-import statsmodels.api as sm
-from scipy.stats import kde
 from scipy import stats
-from scipy import interpolate
-from scipy.stats import norm
+from math import sqrt
 
 
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv",
-                       usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP'], index_col=0)
+                       usecols=['STATION', 'DATE', 'TEMP', 'SLP', 'WDSP'], index_col=1)
     # тут параметры с норм корреляцией(0,5) хотя бы с 1
     #                    usecols=['STATION', 'DATE', 'GUST', 'SLP',
     #                             'SNDP', 'STP', 'TEMP',  'WDSP'], index_col=0)
-    data = data.loc[26063099999]
+    data = data.loc[data.STATION == 26063099999]
+    data = data.drop(columns='STATION')
 
     # TEMP - Mean temperature (.1 Fahrenheit)
     # SLP - Mean sea level pressure for the day in millibars to tenths. Missing = 9999.9 (.1 mb)
     # WDSP – Mean wind speed (.1 knots)
 
     # удаление пропущенных значений
-    data_pred = data.loc[data['SLP']==9999.9]
+    missing_vals = data.loc[data.SLP==9999.9]
     data = data.replace(9999.9, np.nan, regex=True)
     data = data.dropna(subset=['SLP'])
 
-    # data.loc[data['STP'] > 900, 'STP'] = np.nan
-    # data = data.dropna(subset=['STP'])
-
     # пункт 1
     # гистограммы
-
-    pd.plotting.scatter_matrix(data, diagonal="kde")
-    plt.tight_layout()
-    plt.show()
-
     fig, ax = plt.subplots()
     plt.hist2d(data['TEMP'], data['WDSP'], density=True, bins=20, cmap=cm.cividis)
     ax.set_xlabel('температура')
@@ -88,6 +75,22 @@ if __name__ == "__main__":
     ax.set_xlabel('скорость ветра')
     plt.show()
 
+    density_grid_pt = []
+    for i, temp in enumerate(temp_grid):
+        density_grid_pt.append([density((temp, data['WDSP'].mean(), j))[0] for j in pres_grid])
+
+    density_grid_pt = np.array(density_grid_pt)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    pres_grid_mesh, temp_grid_mesh = np.meshgrid(pres_grid, temp_grid)
+    surf = ax.plot_surface(temp_grid_mesh, pres_grid_mesh, density_grid_pt, cmap=cm.cividis)
+    fig.colorbar(surf)
+    ax.set_ylabel('давление')
+    ax.set_xlabel('температура')
+    plt.show()
+
     density_grid_pw = []
     for i, wind in enumerate(wind_grid):
         density_grid_pw.append([density((data['TEMP'].mean(), wind, j))[0] for j in pres_grid])
@@ -104,29 +107,6 @@ if __name__ == "__main__":
     ax.set_xlabel('скорость ветра')
     plt.show()
 
-    density_grid_tp = []
-    for i, pres in enumerate(pres_grid):
-        density_grid_tp.append([density((j, data['WDSP'].mean(), pres))[0] for j in temp_grid])
-
-    density_grid_tp = np.array(density_grid_tp)
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    temp_grid_mesh, pres_grid_mesh = np.meshgrid(temp_grid, pres_grid)
-    surf = ax.plot_surface(temp_grid_mesh, pres_grid_mesh, density_grid_tp, cmap=cm.cividis)
-    fig.colorbar(surf)
-    ax.set_ylabel('давление')
-    ax.set_xlabel('температура')
-    plt.show()
-
-    # pd.plotting.scatter_matrix(data, diagonal="kde")
-    # plt.tight_layout()
-    # plt.show()
-    # нам это не нужно, нo выглядит красиво)
-    # sns.lmplot("TEMP", "STP", data, hue="SLP", fit_reg=False)
-    # plt.show()
-
     # пункт 2
     mrv = data[['WDSP', 'TEMP', 'SLP']]
     # Мат ожидание и дисперсия
@@ -139,39 +119,65 @@ if __name__ == "__main__":
 
     # пункт 3
 
-    means = data[['WDSP', 'TEMP', 'SLP']].groupby('SLP').mean()
-    # print("conditional mean\n", means)
+    means = data[['WDSP', 'TEMP', 'SLP']].groupby(['WDSP', 'TEMP']).mean()
+    wind = []
+    temp = []
+    for ind in means.index:
+        wind.append(ind[0])
+        temp.append(ind[1])
 
-    plt.scatter(means.index, means['WDSP'])
-    plt.title("мат ожидание скорости ветра при фиксированных значениях давления")
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    ax.plot_trisurf(wind, temp, means.SLP, cmap='viridis')
+    ax.set_ylabel('температура')
+    ax.set_xlabel('скорость ветра')
     plt.show()
 
-    plt.scatter(means.index, means['TEMP'])
-    plt.title("мат ожидание температуры при фиксированных значениях давления")
-    plt.show()
+    # Условная дисперсия
+    cond_var = data[['WDSP', 'TEMP', 'SLP']].groupby(['WDSP', 'TEMP']).var()
+    cond_var = cond_var.dropna(subset=['SLP'])
 
-    means = data[['WDSP', 'TEMP', 'SLP']].groupby(['SLP', 'WDSP']).mean()
-    print("РАзмерность мат ожидания")
-    print(means)
+    wind = []
+    temp = []
+    for ind in cond_var.index:
+        wind.append(ind[0])
+        temp.append(ind[1])
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    ax.plot_trisurf(wind, temp, cond_var.SLP, cmap='viridis')
+    ax.set_ylabel('температура')
+    ax.set_xlabel('скорость ветра')
+    plt.show()
 
     # пункт 4
     corr = data.corr()
     print(corr)
     mask = np.zeros_like(corr, dtype=np.bool)
     mask[np.triu_indices_from(mask)] = True
-    sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
+    sns.heatmap(corr, annot=True, fmt='.1f', cmap='coolwarm')
     plt.show()
 
     # пункт 6
+
+    # multiple correlation
+    mult_corr = sqrt(corr.SLP[2] ** 2 + corr.SLP[1] ** 2 - \
+                     2 * corr.TEMP[2] * corr.SLP[2] * corr.SLP[1]) \
+                     / (1 - corr.TEMP[2] ** 2)
+    print(f"Множественный коэффициент корреляции давления на ветер и темппературу = {mult_corr}")
+
+
     X = data[['WDSP', 'TEMP']]
     y = data[['SLP']]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    poly = PolynomialFeatures(2)
-    X_train = poly.fit_transform(X_train)
-    poly = PolynomialFeatures(2)
-    X_test = poly.fit_transform(X_test)
-    X = poly.fit_transform(X)
+    # poly = PolynomialFeatures(2)
+    # X_train = poly.fit_transform(X_train)
+    # poly = PolynomialFeatures(2)
+    # X_test = poly.fit_transform(X_test)
+    # X = poly.fit_transform(X)
 
     reg = LinearRegression(normalize=True)
     reg.fit(X_train, y_train)
@@ -179,8 +185,8 @@ if __name__ == "__main__":
     y_pred_all = np.array(reg.predict(X))
 
     x = range(len(y_test))
-    plt.scatter(x, y_test, label=u'Реальное значение')
-    plt.scatter(x, y_pred, label=u'Предсказанное линейной моделью')
+    plt.scatter(x, y_test, color='navy', label=u'Реальное значение')
+    plt.scatter(x, y_pred, color='gold', label=u'Предсказанное линейной моделью')
     plt.legend()
     plt.show()
 
@@ -195,11 +201,23 @@ if __name__ == "__main__":
     y1 = np.array(y)
     y2 = np.array(y_pred_all)
     y_diff = y1[:, 0] - y2[:, 0]
-    # plt.hist(y_diff, 30, alpha=.3, density=True)
     sns.distplot(y_diff, kde=False)
     plt.show()
 
-    # Confidence interval of regression coef
-    mod = sm.OLS(y_train, X_train)
-    res = mod.fit()
-    print(res.conf_int(0.01))
+    print(f"pvalue, что распределение остатков гауссовское = {stats.normaltest(y_diff).pvalue}")
+
+    # коэффициент детерминации
+    determ = 1 - sum(y_diff**2)/np.var(y1[:, 0]) / len(y_diff)
+    print(f"Коэффициент детерминации = {determ}")
+
+    # заполнение пропусков
+    X_pred = missing_vals[['WDSP', 'TEMP']]
+    y_pred = reg.predict(X_pred)
+
+    missing_vals['SLP'] = y_pred
+
+    data['SLP'].plot(color='navy', label='Реальные значения')
+    missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
+
+    plt.legend()
+    plt.show()
