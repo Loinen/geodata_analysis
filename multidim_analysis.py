@@ -30,12 +30,12 @@ if __name__ == "__main__":
     # WDSP – Mean wind speed (.1 knots)
 
     # удаление пропущенных значений
+    data_pred = data.loc[data['SLP']==9999.9]
     data = data.replace(9999.9, np.nan, regex=True)
     data = data.dropna(subset=['SLP'])
 
     # data.loc[data['STP'] > 900, 'STP'] = np.nan
     # data = data.dropna(subset=['STP'])
-
 
     # пункт 1
     # гистограммы
@@ -104,6 +104,22 @@ if __name__ == "__main__":
     ax.set_xlabel('скорость ветра')
     plt.show()
 
+    density_grid_tp = []
+    for i, pres in enumerate(pres_grid):
+        density_grid_tp.append([density((j, data['WDSP'].mean(), pres))[0] for j in temp_grid])
+
+    density_grid_tp = np.array(density_grid_tp)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    temp_grid_mesh, pres_grid_mesh = np.meshgrid(temp_grid, pres_grid)
+    surf = ax.plot_surface(temp_grid_mesh, pres_grid_mesh, density_grid_tp, cmap=cm.cividis)
+    fig.colorbar(surf)
+    ax.set_ylabel('давление')
+    ax.set_xlabel('температура')
+    plt.show()
+
     # pd.plotting.scatter_matrix(data, diagonal="kde")
     # plt.tight_layout()
     # plt.show()
@@ -134,8 +150,9 @@ if __name__ == "__main__":
     plt.title("мат ожидание температуры при фиксированных значениях давления")
     plt.show()
 
-    # Условная дисперсия
-
+    means = data[['WDSP', 'TEMP', 'SLP']].groupby(['SLP', 'WDSP']).mean()
+    print("РАзмерность мат ожидания")
+    print(means)
 
     # пункт 4
     corr = data.corr()
