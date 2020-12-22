@@ -22,9 +22,46 @@ from pgmpy.inference import VariableElimination
 from pgmpy.base import DAG
 
 
+def draw_comparative_hist (parametr: str, original_data: pd.DataFrame, data_sampled: pd.DataFrame):
+    final_df = pd.DataFrame()
+    df1 = pd.DataFrame()
+    df1[parametr] = original_data[parametr]
+    df1['Data'] = 'Original data'
+    df1['Probability'] = df1[parametr].apply(lambda x: (df1.groupby(parametr)[parametr].count()[x])/original_data.shape[0])
+    df2 = pd.DataFrame()
+    df2[parametr] = data_sampled[parametr]
+    df2['Data'] = 'Synthetic data'
+    df2['Probability'] = df2[parametr].apply(lambda x: (df2.groupby(parametr)[parametr].count()[x])/data_sampled.shape[0])
+    final_df = pd.concat([df1, df2])
+    sns.barplot(x=parametr, y="Probability", hue="Data", data=final_df)
+    plt.show()
+
+
+def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
+    bn.fit(data)
+    result = pd.DataFrame(columns=['Parameter', 'accuracy'])
+    bn_infer = VariableElimination(bn)
+    for j, param in enumerate(data.columns):
+        accuracy = 0
+        test_param = data[param]
+        test_data = data.drop(columns=param)
+        evidence = test_data.to_dict('records')
+        predicted_param = []
+        for element in evidence:
+            prediction = bn_infer.map_query(variables=[param], evidence=element)
+            predicted_param.append(prediction[param])
+        accuracy = accuracy_score(test_param.values, predicted_param)
+        result.loc[j, 'Parameter'] = param
+        result.loc[j, 'accuracy'] = accuracy
+    return result
+
+
 if __name__ == "__main__":
-    data = pd.read_csv("data/data_spb.csv",
-                       usecols=['STATION', 'TEMP', 'SLP', 'WDSP', 'GUST', 'SNDP'], index_col=0)
+    # data = pd.read_csv("data/data_spb.csv",
+    #                    usecols=['STATION', 'TEMP', 'WDSP', 'SLP', 'GUST', 'SNDP'], index_col=0)
+
+    data = pd.read_csv("data/data_spb.csv", usecols=['STATION', 'SLP', 'DEWP', 'MAX',
+                                 'MIN', 'TEMP', 'WDSP'], index_col=0)
     data = data.loc[26063099999]
 
     # TEMP - Mean temperature (.1 Fahrenheit)
@@ -33,57 +70,122 @@ if __name__ == "__main__":
 
     # удаление пропущенных значений
     data = data.replace(9999.9, np.nan, regex=True)
-    data = data.dropna(subset=['SLP'])
-    data.loc[data['GUST'] > 990, 'GUST'] = np.nan
-    data.loc[data['SNDP'] > 990, 'SNDP'] = np.nan
-    data = data.dropna(subset=['GUST'])
-    data = data.dropna(subset=['SNDP'])
+    data.dropna(inplace=True)
     data.reset_index(inplace=True, drop=True)
 
-    # sns.displot(data['SLP'])
-    # plt.show()
+    # Корреляционная матрица
+    corr = data.corr()
+    mask = np.zeros_like(corr, dtype=np.bool)
+    mask[np.triu_indices_from(mask)] = True
+    sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
+    plt.show()
+
+    sns.displot(data['SLP'])
+    plt.show()
     # sns.displot(data['TEMP'])
     # plt.show()
     # sns.displot(data['WDSP'])
     # plt.show()
     # sns.displot(data['STP'])
     # plt.show()
+    pd.options.display.max_rows = 500
+    pd.options.display.max_columns = 500
 
-    print(data.head(10))
+    print(data.head(201))
+    print(len(data))
+    data = data[1:2000]
+    data2 = data[['DEWP', 'SLP',  'TEMP', 'WDSP']]
 
-    transformed_data = copy(data)
-    est = KBinsDiscretizer(n_bins=3, encode='ordinal', strategy='kmeans')
-    data_discrete = est.fit_transform(data.values[:, 0:5])
-    print(data_discrete)
-    transformed_data[['GUST', 'SLP', 'SNDP', 'TEMP', 'WDSP']] = data_discrete
+    bins = 11
+    while True:
+        try:
+            transformed_data = copy(data)
+            est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+            data_discrete = est.fit_transform(data2.values[:, 0:4])
+            data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete
 
-    hc = HillClimbSearch(transformed_data, scoring_method=K2Score(transformed_data))
+            data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
+            #print(data_discrete)
+            transformed_data[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = data_discrete
+            hc = HillClimbSearch(transformed_data, scoring_method=BDeuScore(transformed_data))
+            best_model = hc.estimate()
 
-    best_model = hc.estimate()
+            G_K2 = nx.DiGraph()
+            G_K2.add_edges_from(best_model.edges())
+            pos = nx.layout.circular_layout(G_K2)
+            nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
+            plt.show()
 
+            accuracy_k2 = accuracy_params_restoration(BayesianModel(best_model.edges()), transformed_data)
+            print(accuracy_k2)
+            break
+
+        except KeyError:
+            print(bins)
+            bins = bins+1
+            continue
+
+    print("bins", bins)
+
+    bm = BayesianModel()
+    bm.add_edge('TEMP', 'SLP')
+    bm.add_edge('WDSP', 'SLP')
+    bm.add_edge('DEWP', 'TEMP')
     G_K2 = nx.DiGraph()
-    G_K2.add_edges_from(best_model.edges())
+    G_K2.add_edges_from(bm.edges())
     pos = nx.layout.circular_layout(G_K2)
     nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
     plt.show()
 
-    def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
-        bn.fit(data)
-        result = pd.DataFrame(columns=['Parameter', 'accuracy'])
-        bn_infer = VariableElimination(bn)
-        for j, param in enumerate(data.columns):
-            accuracy = 0
-            test_param = data[param]
-            test_data = data.drop(columns=param)
-            evidence = test_data.to_dict('records')
-            predicted_param = []
-            for element in evidence:
-                prediction = bn_infer.map_query(variables=[param], evidence=element)
-                predicted_param.append(prediction[param])
-            accuracy = accuracy_score(test_param.values, predicted_param)
-            result.loc[j, 'Parameter'] = param
-            result.loc[j, 'accuracy'] = accuracy
-        return result
+    accuracy_manual_k2 = accuracy_params_restoration(bm, data2)
 
-    accuracy_k2 = accuracy_params_restoration(BayesianModel(best_model.edges()), transformed_data)
+    def sampling(bn: DAG, data: pd.DataFrame, n: int = 100):
+        bn_new = BayesianModel(bn.edges())
+        bn_new.fit(data)
+        sampler = BayesianModelSampling(bn_new)
+        sample = sampler.forward_sample(size=n, return_type='dataframe')
+        return sample
+
+    hc_BicScore = HillClimbSearch(transformed_data, scoring_method=BicScore(transformed_data))
+    best_model_BicScore = hc_BicScore.estimate()
+
+    print("shape", transformed_data.shape)
+
+    sample_Bic = sampling(best_model_BicScore, transformed_data, len(data))
+
+    sample_Bic[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic[
+               ['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
+
+    draw_comparative_hist('DEWP', transformed_data, sample_Bic)
+    draw_comparative_hist('SLP', transformed_data, sample_Bic)
+    draw_comparative_hist('TEMP', transformed_data, sample_Bic)
+    draw_comparative_hist('WDSP', transformed_data, sample_Bic)
+
+    sns.distplot(data['WDSP'], label='Original data')
+    sns.distplot(sample_Bic['WDSP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
+
+    sns.distplot(data['TEMP'], label='Original data')
+    sns.distplot(sample_Bic['TEMP'], label='Generated data')
+    plt.legend()
+    plt.show()
+
+    sns.distplot(data['SLP'], label='Original data')
+    sns.distplot(sample_Bic['SLP'], label='Generated data')
+    plt.legend()
+    plt.show()
+
+    sns.distplot(data['DEWP'], label='Original data')
+    sns.distplot(sample_Bic['DEWP'], label='Generated data')
+    plt.legend()
+    plt.show()
+
     print(accuracy_k2)
+    print(accuracy_manual_k2)
+    print("bins", bins)
+    print(sample_Bic['SLP'])
+
+
+
+
