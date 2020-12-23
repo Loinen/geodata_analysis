@@ -1,17 +1,10 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import KBinsDiscretizer
 from copy import copy
 import numpy as np
-import statsmodels.api as sm
 import networkx as nx
 
 from pgmpy.estimators import HillClimbSearch
@@ -22,16 +15,18 @@ from pgmpy.inference import VariableElimination
 from pgmpy.base import DAG
 
 
-def draw_comparative_hist (parametr: str, original_data: pd.DataFrame, data_sampled: pd.DataFrame):
+def draw_comparative_hist(parametr: str, original_data: pd.DataFrame, data_sampled: pd.DataFrame):
     final_df = pd.DataFrame()
     df1 = pd.DataFrame()
     df1[parametr] = original_data[parametr]
     df1['Data'] = 'Original data'
-    df1['Probability'] = df1[parametr].apply(lambda x: (df1.groupby(parametr)[parametr].count()[x])/original_data.shape[0])
+    df1['Probability'] = df1[parametr].apply(
+        lambda x: (df1.groupby(parametr)[parametr].count()[x]) / original_data.shape[0])
     df2 = pd.DataFrame()
     df2[parametr] = data_sampled[parametr]
     df2['Data'] = 'Synthetic data'
-    df2['Probability'] = df2[parametr].apply(lambda x: (df2.groupby(parametr)[parametr].count()[x])/data_sampled.shape[0])
+    df2['Probability'] = df2[parametr].apply(
+        lambda x: (df2.groupby(parametr)[parametr].count()[x]) / data_sampled.shape[0])
     final_df = pd.concat([df1, df2])
     sns.barplot(x=parametr, y="Probability", hue="Data", data=final_df)
     plt.show()
@@ -55,6 +50,7 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
         result.loc[j, 'accuracy'] = accuracy
     return result
 
+
 def sampling(bn: DAG, data: pd.DataFrame, n: int = 100):
     bn_new = BayesianModel(bn.edges())
     bn_new.fit(data)
@@ -68,9 +64,8 @@ if __name__ == "__main__":
     #                    usecols=['STATION', 'TEMP', 'WDSP', 'SLP', 'GUST', 'SNDP'], index_col=0)
 
     data = pd.read_csv("data/data_spb.csv", usecols=['STATION', 'SLP', 'DEWP', 'MAX',
-                                 'MIN', 'TEMP', 'WDSP'], index_col=0)
+                                                     'MIN', 'TEMP', 'WDSP'], index_col=0)
     data = data.loc[26063099999]
-
     # TEMP - Mean temperature (.1 Fahrenheit)
     # SLP - Mean sea level pressure for the day in millibars to tenths. Missing = 9999.9 (.1 mb)
     # WDSP – Mean wind speed (.1 knots)
@@ -93,58 +88,57 @@ if __name__ == "__main__":
     print(len(data))
     # ограничиваем число данных, выбираем параметры для ручного построения байесовской сети
     data = data[1:2000]
-    data2 = data[['DEWP', 'SLP',  'TEMP', 'WDSP']]
+    data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
 
-    bins = 11
+    bins = 4
     # на случай, если бинов недостаточно
-    while True:
-        try:
-            transformed_data = copy(data)
-            transformed_data_manual = copy(data)
+    # while True:
+    #     try:
+    #
+    #         break
+    #
+    #     except KeyError:
+    #         print(bins)
+    #         bins = bins+1
+    #         continue
+    transformed_data = copy(data)
+    transformed_data2 = copy(data2)
 
-            est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+    est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
 
-            data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
-            transformed_data[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = data_discrete
-            hc = HillClimbSearch(transformed_data, scoring_method=BDeuScore(transformed_data))
-            best_model = hc.estimate()
+    data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
+    transformed_data[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
+    hc = HillClimbSearch(transformed_data, scoring_method=BDeuScore(transformed_data))
+    best_model = hc.estimate()
 
-            G_K2 = nx.DiGraph()
-            G_K2.add_edges_from(best_model.edges())
-            pos = nx.layout.circular_layout(G_K2)
-            nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
-            plt.show()
+    G_K2 = nx.DiGraph()
+    G_K2.add_edges_from(best_model.edges())
+    pos = nx.layout.circular_layout(G_K2)
+    nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
+    plt.show()
 
-            accuracy = accuracy_params_restoration(BayesianModel(best_model.edges()), transformed_data)
-            print(accuracy)
+    accuracy = accuracy_params_restoration(BayesianModel(best_model.edges()), transformed_data)
+    print(accuracy)
 
-            # ручное
-            data_discrete_manual = est.fit_transform(data2.values[:, 0:4])
-            transformed_data_manual[['DEWP', 'SLP',  'TEMP', 'WDSP']] = data_discrete_manual
-            hc = HillClimbSearch(transformed_data_manual, scoring_method=BDeuScore(transformed_data_manual))
-            best_model_manual = hc.estimate()
+    # ручное
+    data_discrete2 = est.fit_transform(data2.values[:, 0:4])
+    transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
+    hc = HillClimbSearch(transformed_data2, scoring_method=BDeuScore(transformed_data2))
+    best_model2 = hc.estimate()
 
-            # создаем узлы для байесовской сети
-            bm = BayesianModel()
-            bm.add_edge('TEMP', 'SLP')
-            bm.add_edge('WDSP', 'SLP')
-            bm.add_edge('DEWP', 'TEMP')
+    # создаем узлы для байесовской сети
+    bm = BayesianModel([('TEMP', 'SLP'), ('WDSP', 'SLP'), ('DEWP', 'TEMP')])
 
-            G_K2 = nx.DiGraph()
-            G_K2.add_edges_from(bm.edges())
-            pos = nx.layout.circular_layout(G_K2)
-            nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
-            plt.show()
+    G_K2 = nx.DiGraph()
+    G_K2.add_edges_from(bm.edges())
+    pos = nx.layout.circular_layout(G_K2)
+    nx.draw(G_K2, pos, with_labels=True, font_weight='bold')
+    plt.show()
+    print(bm.get_cpds())
+    print(transformed_data2)
 
-            accuracy_manual = accuracy_params_restoration(bm.edges(), transformed_data_manual)
-
-            break
-
-        except KeyError:
-            print(bins)
-            bins = bins+1
-            continue
-
+    accuracy2 = accuracy_params_restoration(BayesianModel(best_model2.edges()), transformed_data2)
+    ##
     hc_BicScore = HillClimbSearch(transformed_data, scoring_method=BicScore(transformed_data))
     best_model_BicScore = hc_BicScore.estimate()
 
@@ -159,16 +153,16 @@ if __name__ == "__main__":
     draw_comparative_hist('TEMP', transformed_data, sample_Bic)
     draw_comparative_hist('WDSP', transformed_data, sample_Bic)
 
-    hc_BicScore = HillClimbSearch(transformed_data_manual, scoring_method=BicScore(transformed_data_manual))
+    hc_BicScore = HillClimbSearch(transformed_data2, scoring_method=BicScore(transformed_data2))
     best_model_BicScore = hc_BicScore.estimate()
-    sample_Bic_manual = sampling(best_model_BicScore, transformed_data_manual, len(data2))
-    sample_Bic_manual[['DEWP', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic_manual[
-               ['DEWP', 'SLP',  'TEMP', 'WDSP']].values)
+    sample_Bic2 = sampling(best_model_BicScore, transformed_data2, len(data2))
+    sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic2[
+                ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
 
-    draw_comparative_hist('DEWP', transformed_data_manual, sample_Bic_manual)
-    draw_comparative_hist('SLP', transformed_data_manual, sample_Bic_manual)
-    draw_comparative_hist('TEMP', transformed_data_manual, sample_Bic_manual)
-    draw_comparative_hist('WDSP', transformed_data_manual, sample_Bic_manual)
+    draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('SLP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('TEMP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('WDSP', transformed_data2, sample_Bic2)
 
     sns.distplot(data['WDSP'], label='Original data')
     sns.distplot(sample_Bic['WDSP'], label='Generated data dist')
@@ -191,10 +185,6 @@ if __name__ == "__main__":
     plt.show()
 
     print(accuracy)
-    print(accuracy_manual)
+    print(accuracy2)
     print("bins", bins)
     print(sample_Bic['SLP'])
-
-
-
-
