@@ -154,9 +154,13 @@ if __name__ == "__main__":
 
     missing_vals = missing_vals.drop(columns='SLP')
     evidence = missing_vals.to_dict('records')
-    prediction = best_model_BicScore.map_query(variables=['SLP'], evidence=evidence)
-    missing_vals['SLP'] = prediction
-    
+    predicted_param = []
+    for element in evidence:
+        prediction = best_model_BicScore.map_query(variables=['SLP'], evidence=element)
+        predicted_param.append(prediction['SLP'])
+
+    missing_vals['SLP'] = predicted_param
+
     data['SLP'].plot(color='navy', label='Реальные значения')
     missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
 
