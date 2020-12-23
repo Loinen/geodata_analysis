@@ -105,6 +105,7 @@ if __name__ == "__main__":
     transformed_data2 = copy(data2)
 
     est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+    est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
 
     data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
     transformed_data[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     print(accuracy)
 
     # ручное
-    data_discrete2 = est.fit_transform(data2.values[:, 0:4])
+    data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
     transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
     hc = HillClimbSearch(transformed_data2, scoring_method=BDeuScore(transformed_data2))
     best_model2 = hc.estimate()
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     hc_BicScore = HillClimbSearch(transformed_data2, scoring_method=BicScore(transformed_data2))
     best_model_BicScore = hc_BicScore.estimate()
     sample_Bic2 = sampling(best_model_BicScore, transformed_data2, len(data2))
-    sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic2[
+    sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
                 ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
 
     draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
