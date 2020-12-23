@@ -77,6 +77,7 @@ if __name__ == "__main__":
     # WDSP – Mean wind speed (.1 knots)
 
     # удаление пропущенных значений
+    missing_vals = data.loc[data.SLP == 9999.9]
     data = data.replace(9999.9, np.nan, regex=True)
     data.dropna(inplace=True)
     data.reset_index(inplace=True, drop=True)
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     data = data[1:2000]
     data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
 
-    bins = 4
+    bins = 11
     transformed_data = copy(data)
     transformed_data2 = copy(data2)
 
@@ -101,6 +102,7 @@ if __name__ == "__main__":
     transformed_data[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
     hc_BicScore = HillClimbSearch(transformed_data, scoring_method=BicScore(transformed_data))
     best_model_BicScore = hc_BicScore.estimate()
+
     sample_Bic = sampling(best_model_BicScore, transformed_data, len(data))
     sample_Bic[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic[
                ['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
@@ -147,5 +149,16 @@ if __name__ == "__main__":
     sns.distplot(data['DEWP'], label='Original data')
     sns.distplot(sample_Bic['DEWP'], label='Generated data')
     sns.distplot(sample_Bic2['DEWP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
+
+    missing_vals = missing_vals.drop(columns='SLP')
+    evidence = missing_vals.to_dict('records')
+    prediction = best_model_BicScore.map_query(variables=['SLP'], evidence=evidence)
+    missing_vals['SLP'] = prediction
+    
+    data['SLP'].plot(color='navy', label='Реальные значения')
+    missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
+
     plt.legend()
     plt.show()
