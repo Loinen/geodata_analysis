@@ -34,7 +34,7 @@ def draw_comparative_hist(parametr: str, original_data: pd.DataFrame, data_sampl
 
 def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
     bn.fit(data)
-    result = pd.DataFrame(columns=['Parameter', 'accuracy'])
+    result = pd.DataFrame(columns=['Parameter', 'accuracy', 'mae'])
     bn_infer = VariableElimination(bn)
     for j, param in enumerate(data.columns):
         accuracy = 0
@@ -46,6 +46,8 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
             prediction = bn_infer.map_query(variables=[param], evidence=element)
             predicted_param.append(prediction[param])
         accuracy = accuracy_score(test_param.values, predicted_param)
+        mae = sum(np.array(predicted_param) - test_param.values) / len(predicted_param)
+        result.loc[j, 'mae'] = mae
         result.loc[j, 'Parameter'] = param
         result.loc[j, 'accuracy'] = accuracy
     return result
@@ -65,7 +67,7 @@ def sampling(bn: DAG, data: pd.DataFrame, n):
     bn_new.fit(data)
     sampler = BayesianModelSampling(bn_new)
     sample = sampler.forward_sample(size=n, return_type='dataframe')
-    return sample
+    return sample, accuracy
 
 
 if __name__ == "__main__":
@@ -77,10 +79,13 @@ if __name__ == "__main__":
     # WDSP – Mean wind speed (.1 knots)
 
     # удаление пропущенных значений
+    data.reset_index(inplace=True, drop=True)
+    data.dropna(inplace=True)
     missing_vals = data.loc[data.SLP == 9999.9]
     data = data.replace(9999.9, np.nan, regex=True)
     data.dropna(inplace=True)
-    data.reset_index(inplace=True, drop=True)
+    print(missing_vals)
+    print(len(data))
 
     # Корреляционная матрица
     corr = data.corr()
@@ -89,21 +94,21 @@ if __name__ == "__main__":
     sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
     plt.show()
 
-    # ограничиваем число данных, выбираем параметры для ручного добавления ребер байесовской сети
-    data = data[1:2000]
+    #data = data[1:2000]
     data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
+    missing_vals = missing_vals[1:2000]
 
-    bins = 11
+    bins = 15
     transformed_data = copy(data)
     transformed_data2 = copy(data2)
 
     est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
     data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
     transformed_data[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
-    hc_BicScore = HillClimbSearch(transformed_data, scoring_method=BicScore(transformed_data))
+    hc_BicScore = HillClimbSearch(transformed_data, scoring_method=K2Score(transformed_data))
     best_model_BicScore = hc_BicScore.estimate()
 
-    sample_Bic = sampling(best_model_BicScore, transformed_data, len(data))
+    sample_Bic, accuracy1 = sampling(best_model_BicScore, transformed_data, len(data))
     sample_Bic[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic[
                ['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
 
@@ -116,10 +121,10 @@ if __name__ == "__main__":
     est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
     data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
     transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
-    hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=BicScore(transformed_data2))
-    best_model_BicScore2 = hc_BicScore2.estimate(white_list=[('TEMP', 'SLP'), ('WDSP', 'SLP'), ('DEWP', 'TEMP')])
+    hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
+    best_model_BicScore2 = hc_BicScore2.estimate()
 
-    sample_Bic2 = sampling(best_model_BicScore2, transformed_data2, len(data2))
+    sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2))
     sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
                 ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
 
@@ -152,17 +157,20 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    missing_vals = missing_vals.drop(columns='SLP')
-    evidence = missing_vals.to_dict('records')
-    predicted_param = []
-    for element in evidence:
-        prediction = best_model_BicScore.map_query(variables=['SLP'], evidence=element)
-        predicted_param.append(prediction['SLP'])
-
-    missing_vals['SLP'] = predicted_param
-
-    data['SLP'].plot(color='navy', label='Реальные значения')
-    missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
+    # missing_vals = missing_vals.drop(columns='SLP')
+    # evidence = missing_vals.to_dict('records')
+    # predicted_param = []
+    # for element in evidence:
+    #     bm = BayesianModel(best_model_BicScore.edges())
+    #     bm.fit(transformed_data)
+    #     ve = VariableElimination(bm)
+    #     prediction = ve.map_query(variables=['SLP'], evidence=element)
+    # missing_vals['SLP'] = predicted_param
+    #
+    # data['SLP'].plot(color='navy', label='Реальные значения')
+    # missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
 
     plt.legend()
     plt.show()
+    print(accuracy1)
+
