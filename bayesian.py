@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, mean_squared_error
+from sklearn.metrics import accuracy_score, mean_squared_error, mean_absolute_error
 from sklearn.preprocessing import KBinsDiscretizer
 from copy import copy
 import numpy as np
@@ -32,7 +32,7 @@ def draw_comparative_hist(parametr: str, original_data: pd.DataFrame, data_sampl
     plt.show()
 
 
-def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
+def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est):
     bn.fit(data)
     result = pd.DataFrame(columns=['Parameter', 'accuracy', 'mse', 'mae'])
     bn_infer = VariableElimination(bn)
@@ -46,7 +46,9 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
             prediction = bn_infer.map_query(variables=[param], evidence=element)
             predicted_param.append(prediction[param])
         accuracy = accuracy_score(test_param.values, predicted_param)
-        mae = sum(np.array(predicted_param) - test_param.values) / len(predicted_param)
+
+        predicted_param = est.inverse_transform(predicted_param)
+        mae = mean_absolute_error(predicted_param, test_param.values)
         mse = mean_squared_error(predicted_param, test_param.values)
         result.loc[j, 'mae'] = mae
         result.loc[j, 'mse'] = mse
@@ -55,14 +57,14 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
     return result
 
 
-def sampling(bn: DAG, data: pd.DataFrame, n):
+def sampling(bn: DAG, data: pd.DataFrame, n, est):
     G = nx.DiGraph()
     G.add_edges_from(bn.edges())
     pos = nx.layout.circular_layout(G)
     nx.draw(G, pos, with_labels=True, font_weight='bold')
     plt.show()
 
-    accuracy = accuracy_params_restoration(BayesianModel(bn.edges()), data)
+    accuracy = accuracy_params_restoration(BayesianModel(bn.edges()), data, est)
     print(accuracy)
 
     bn_new = BayesianModel(bn.edges())
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     hc_BicScore = HillClimbSearch(transformed_data, scoring_method=K2Score(transformed_data))
     best_model_BicScore = hc_BicScore.estimate()
 
-    sample_Bic, accuracy1 = sampling(best_model_BicScore, transformed_data, len(data))
+    sample_Bic, accuracy1 = sampling(best_model_BicScore, transformed_data, len(data), est=est)
     sample_Bic[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic[
                ['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
 
@@ -126,7 +128,7 @@ if __name__ == "__main__":
     # hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
     # best_model_BicScore2 = hc_BicScore2.estimate()
     #
-    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2))
+    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2), est=est2)
     # sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
     #             ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
     #
