@@ -32,7 +32,7 @@ def draw_comparative_hist(parametr: str, original_data: pd.DataFrame, data_sampl
     plt.show()
 
 
-def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est):
+def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est, real_data):
     bn.fit(data)
     result = pd.DataFrame(columns=['Parameter', 'accuracy', 'mse', 'mae'])
     bn_infer = VariableElimination(bn)
@@ -52,7 +52,7 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est):
         predicted_param2[param] = predicted_param
         predicted_param2[cols] = est.inverse_transform(predicted_param2[cols].values)
         a = predicted_param2[param]
-        b = data[param]
+        b = real_data[param]
 
         mae = mean_absolute_error(a, b)
         mse = mean_squared_error(a, b)
@@ -63,14 +63,14 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est):
     return result
 
 
-def sampling(bn: DAG, data: pd.DataFrame, n, est):
+def sampling(bn: DAG, data: pd.DataFrame, n, est, real_data):
     G = nx.DiGraph()
     G.add_edges_from(bn.edges())
     pos = nx.layout.circular_layout(G)
     nx.draw(G, pos, with_labels=True, font_weight='bold')
     plt.show()
 
-    accuracy = accuracy_params_restoration(BayesianModel(bn.edges()), data, est)
+    accuracy = accuracy_params_restoration(BayesianModel(bn.edges()), data, est, real_data)
     print(accuracy)
 
     bn_new = BayesianModel(bn.edges())
@@ -118,7 +118,8 @@ if __name__ == "__main__":
     hc_BicScore = HillClimbSearch(transformed_data, scoring_method=K2Score(transformed_data))
     best_model_BicScore = hc_BicScore.estimate()
 
-    sample_Bic, accuracy1 = sampling(best_model_BicScore, transformed_data, len(data), est=est)
+    sample_Bic, accuracy1 = sampling(best_model_BicScore, transformed_data,
+                                     len(data), est=est, real_data=data)
     sample_Bic[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(sample_Bic[
                ['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
 
@@ -134,7 +135,8 @@ if __name__ == "__main__":
     # hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
     # best_model_BicScore2 = hc_BicScore2.estimate()
     #
-    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2), est=est2)
+    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2,
+    #                                   len(data2), est=est2, real_data=data)
     # sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
     #             ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
     #
@@ -190,8 +192,8 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    data['SLP'].scatter(color='navy', label='Реальные значения')
-    transformed_data['SLP'].scatter(color='gold', label='Заполненные значения')
+    plt.scatter(data['DATE'], data['SLP'], color='navy', label='Реальные значения')
+    plt.scatter(transformed_data['DATE'], transformed_data['SLP'], color='gold', label='Заполненные значения')
     plt.show()
 
     print(accuracy1)
