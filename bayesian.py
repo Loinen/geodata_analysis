@@ -82,7 +82,7 @@ def sampling(bn: DAG, data: pd.DataFrame, n, est, real_data):
 
 if __name__ == "__main__":
     data = pd.read_csv("data/data_spb.csv", usecols=['STATION', 'SLP', 'DEWP', 'MAX',
-                                                     'MIN', 'TEMP', 'WDSP'], index_col=0)
+                                                     'MIN', 'TEMP', 'WDSP', 'DATE'], index_col=0)
     data = data.loc[26063099999]
     # TEMP - Mean temperature (.1 Fahrenheit)
     # SLP - Mean sea level pressure for the day in millibars to tenths. Missing = 9999.9 (.1 mb)
