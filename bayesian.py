@@ -46,10 +46,16 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame, est):
             prediction = bn_infer.map_query(variables=[param], evidence=element)
             predicted_param.append(prediction[param])
         accuracy = accuracy_score(test_param.values, predicted_param)
+        cols = data.columns.tolist()
 
-        predicted_param = est.inverse_transform(predicted_param)
-        mae = mean_absolute_error(predicted_param, test_param.values)
-        mse = mean_squared_error(predicted_param, test_param.values)
+        predicted_param2 = copy(data)
+        predicted_param2[param] = predicted_param
+        predicted_param2[cols] = est.inverse_transform(predicted_param2[cols].values)
+        a = predicted_param2[param]
+        b = data[param]
+
+        mae = mean_absolute_error(a, b)
+        mse = mean_squared_error(a, b)
         result.loc[j, 'mae'] = mae
         result.loc[j, 'mse'] = mse
         result.loc[j, 'Parameter'] = param
@@ -98,9 +104,9 @@ if __name__ == "__main__":
     sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
     plt.show()
 
-    data = data[1:2000]
+    data = data[1:200]
     data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
-    missing_vals = missing_vals[1:2000]
+    missing_vals = missing_vals[1:200]
 
     bins = 4
     transformed_data = copy(data)
@@ -161,25 +167,34 @@ if __name__ == "__main__":
     # plt.legend()
     # plt.show()
     #
-    # print(accuracy1, accuracy2)
 
+    est3 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+    data_discrete = est3.fit_transform(missing_vals.values[:, 0:6])
+    missing_vals[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
 
     predicted_param = []
     bm = BayesianModel(best_model_BicScore.edges())
     bm.fit(transformed_data)
     ve = VariableElimination(bm)
-    for param in enumerate(missing_vals['SLP']):
-        missing_vals = missing_vals.drop(columns='SLP')
-        evidence = missing_vals.to_dict('records')
-        for element in evidence:
-            prediction = ve.map_query(variables=[param], evidence=element)
-            predicted_param.append(prediction)
-    missing_vals['SLP'] = predicted_param
-    predicted_param = est.inverse_transform(predicted_param)
-
+    missing_vals = missing_vals.drop(columns='SLP')
+    evidence = missing_vals.to_dict('records')
+    for element in evidence:
+        prediction = ve.map_query(['SLP'], evidence=element)
+        predicted_param.append(prediction['SLP'])
+    transformed_data['SLP'] = predicted_param
+    print(transformed_data)
+    transformed_data[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']] = est.inverse_transform(
+        transformed_data[['DEWP', 'MAX', 'MIN', 'SLP',  'TEMP', 'WDSP']].values)
     data['SLP'].plot(color='navy', label='Реальные значения')
-    missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
-
+    transformed_data['SLP'].plot(color='gold', label='Заполненные значения')
     plt.legend()
     plt.show()
+
+    data['SLP'].scatter(color='navy', label='Реальные значения')
+    transformed_data['SLP'].scatter(color='gold', label='Заполненные значения')
+    plt.show()
+
+    print(accuracy1)
+
+
 
