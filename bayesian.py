@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.preprocessing import KBinsDiscretizer
 from copy import copy
 import numpy as np
@@ -34,7 +34,7 @@ def draw_comparative_hist(parametr: str, original_data: pd.DataFrame, data_sampl
 
 def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
     bn.fit(data)
-    result = pd.DataFrame(columns=['Parameter', 'accuracy', 'mae'])
+    result = pd.DataFrame(columns=['Parameter', 'accuracy', 'mse', 'mae'])
     bn_infer = VariableElimination(bn)
     for j, param in enumerate(data.columns):
         accuracy = 0
@@ -47,7 +47,9 @@ def accuracy_params_restoration(bn: BayesianModel, data: pd.DataFrame):
             predicted_param.append(prediction[param])
         accuracy = accuracy_score(test_param.values, predicted_param)
         mae = sum(np.array(predicted_param) - test_param.values) / len(predicted_param)
+        mse = mean_squared_error(predicted_param, test_param.values)
         result.loc[j, 'mae'] = mae
+        result.loc[j, 'mse'] = mse
         result.loc[j, 'Parameter'] = param
         result.loc[j, 'accuracy'] = accuracy
     return result
@@ -94,11 +96,11 @@ if __name__ == "__main__":
     sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
     plt.show()
 
-    #data = data[1:2000]
+    data = data[1:2000]
     data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
     missing_vals = missing_vals[1:2000]
 
-    bins = 15
+    bins = 4
     transformed_data = copy(data)
     transformed_data2 = copy(data2)
 
@@ -118,59 +120,64 @@ if __name__ == "__main__":
     draw_comparative_hist('WDSP', transformed_data, sample_Bic)
 
     # ручное
-    est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
-    data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
-    transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
-    hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
-    best_model_BicScore2 = hc_BicScore2.estimate()
-
-    sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2))
-    sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
-                ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
-
-    draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
-    draw_comparative_hist('SLP', transformed_data2, sample_Bic2)
-    draw_comparative_hist('TEMP', transformed_data2, sample_Bic2)
-    draw_comparative_hist('WDSP', transformed_data2, sample_Bic2)
-
-    sns.distplot(data['WDSP'], label='Original data')
-    sns.distplot(sample_Bic['WDSP'], label='Generated data')
-    sns.distplot(sample_Bic2['WDSP'], label='Generated data dist')
-    plt.legend()
-    plt.show()
-
-    sns.distplot(data['TEMP'], label='Original data')
-    sns.distplot(sample_Bic['TEMP'], label='Generated data')
-    sns.distplot(sample_Bic2['TEMP'], label='Generated data dist')
-    plt.legend()
-    plt.show()
-
-    sns.distplot(data['SLP'], label='Original data')
-    sns.distplot(sample_Bic['SLP'], label='Generated data')
-    sns.distplot(sample_Bic2['SLP'], label='Generated data dist')
-    plt.legend()
-    plt.show()
-
-    sns.distplot(data['DEWP'], label='Original data')
-    sns.distplot(sample_Bic['DEWP'], label='Generated data')
-    sns.distplot(sample_Bic2['DEWP'], label='Generated data dist')
-    plt.legend()
-    plt.show()
-
-    # missing_vals = missing_vals.drop(columns='SLP')
-    # evidence = missing_vals.to_dict('records')
-    # predicted_param = []
-    # for element in evidence:
-    #     bm = BayesianModel(best_model_BicScore.edges())
-    #     bm.fit(transformed_data)
-    #     ve = VariableElimination(bm)
-    #     prediction = ve.map_query(variables=['SLP'], evidence=element)
-    # missing_vals['SLP'] = predicted_param
+    # est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+    # data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
+    # transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
+    # hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
+    # best_model_BicScore2 = hc_BicScore2.estimate()
     #
-    # data['SLP'].plot(color='navy', label='Реальные значения')
-    # missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
+    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2, len(data2))
+    # sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
+    #             ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
+    #
+    # draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
+    # draw_comparative_hist('SLP', transformed_data2, sample_Bic2)
+    # draw_comparative_hist('TEMP', transformed_data2, sample_Bic2)
+    # draw_comparative_hist('WDSP', transformed_data2, sample_Bic2)
+
+    # sns.distplot(data['WDSP'], label='Original data')
+    # sns.distplot(sample_Bic['WDSP'], label='Generated data')
+    # sns.distplot(sample_Bic2['WDSP'], label='Generated data dist')
+    # plt.legend()
+    # plt.show()
+    #
+    # sns.distplot(data['TEMP'], label='Original data')
+    # sns.distplot(sample_Bic['TEMP'], label='Generated data')
+    # sns.distplot(sample_Bic2['TEMP'], label='Generated data dist')
+    # plt.legend()
+    # plt.show()
+    #
+    # sns.distplot(data['SLP'], label='Original data')
+    # sns.distplot(sample_Bic['SLP'], label='Generated data')
+    # sns.distplot(sample_Bic2['SLP'], label='Generated data dist')
+    # plt.legend()
+    # plt.show()
+    #
+    # sns.distplot(data['DEWP'], label='Original data')
+    # sns.distplot(sample_Bic['DEWP'], label='Generated data')
+    # sns.distplot(sample_Bic2['DEWP'], label='Generated data dist')
+    # plt.legend()
+    # plt.show()
+    #
+    # print(accuracy1, accuracy2)
+
+
+    predicted_param = []
+    bm = BayesianModel(best_model_BicScore.edges())
+    bm.fit(transformed_data)
+    ve = VariableElimination(bm)
+    for param in enumerate(missing_vals['SLP']):
+        missing_vals = missing_vals.drop(columns='SLP')
+        evidence = missing_vals.to_dict('records')
+        for element in evidence:
+            prediction = ve.map_query(variables=[param], evidence=element)
+            predicted_param.append(prediction)
+    missing_vals['SLP'] = predicted_param
+    predicted_param = est.inverse_transform(predicted_param)
+
+    data['SLP'].plot(color='navy', label='Реальные значения')
+    missing_vals['SLP'].plot(color='gold', label='Заполненные значения')
 
     plt.legend()
     plt.show()
-    print(accuracy1)
 
