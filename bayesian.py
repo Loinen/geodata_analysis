@@ -94,8 +94,6 @@ if __name__ == "__main__":
     missing_vals = data.loc[data.SLP == 9999.9]
     data = data.replace(9999.9, np.nan, regex=True)
     data.dropna(inplace=True)
-    print(missing_vals)
-    print(len(data))
 
     # Корреляционная матрица
     corr = data.corr()
@@ -104,14 +102,39 @@ if __name__ == "__main__":
     sns.heatmap(corr, annot=True, fmt='.1f', cmap='Blues')
     plt.show()
 
-    data = data[1:200]
-    data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
-    missing_vals = missing_vals[1:200]
+    data = data[1:5000]
+    missing_vals = missing_vals[1:5000]
 
-    bins = 4
+    date = data.DATE
+    date_mv = missing_vals.DATE
+    data.drop(columns='DATE', inplace=True)
+    missing_vals.drop(columns='DATE', inplace=True)
+
+    data2 = data[['DEWP', 'SLP', 'TEMP', 'WDSP']]
+    data2 = data2[1:5000]
+
+    bins = 16
     transformed_data = copy(data)
     transformed_data2 = copy(data2)
 
+    # 4 param
+    est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
+    data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
+    transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
+    hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
+    best_model_BicScore2 = hc_BicScore2.estimate()
+
+    sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2,
+                                      len(data2), est=est2, real_data=data2)
+    sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
+                ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
+
+    draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('SLP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('TEMP', transformed_data2, sample_Bic2)
+    draw_comparative_hist('WDSP', transformed_data2, sample_Bic2)
+
+    # 6 param
     est = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
     data_discrete = est.fit_transform(transformed_data.values[:, 0:6])
     transformed_data[['DEWP', 'MAX', 'MIN', 'SLP', 'TEMP', 'WDSP']] = data_discrete
@@ -128,47 +151,29 @@ if __name__ == "__main__":
     draw_comparative_hist('TEMP', transformed_data, sample_Bic)
     draw_comparative_hist('WDSP', transformed_data, sample_Bic)
 
-    # ручное
-    # est2 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
-    # data_discrete2 = est2.fit_transform(data2.values[:, 0:4])
-    # transformed_data2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = data_discrete2
-    # hc_BicScore2 = HillClimbSearch(transformed_data2, scoring_method=K2Score(transformed_data2))
-    # best_model_BicScore2 = hc_BicScore2.estimate()
-    #
-    # sample_Bic2, accuracy2 = sampling(best_model_BicScore2, transformed_data2,
-    #                                   len(data2), est=est2, real_data=data)
-    # sample_Bic2[['DEWP', 'SLP', 'TEMP', 'WDSP']] = est2.inverse_transform(sample_Bic2[
-    #             ['DEWP', 'SLP', 'TEMP', 'WDSP']].values)
-    #
-    # draw_comparative_hist('DEWP', transformed_data2, sample_Bic2)
-    # draw_comparative_hist('SLP', transformed_data2, sample_Bic2)
-    # draw_comparative_hist('TEMP', transformed_data2, sample_Bic2)
-    # draw_comparative_hist('WDSP', transformed_data2, sample_Bic2)
+    sns.distplot(data['WDSP'], bins=bins, label='Original data')
+    sns.distplot(sample_Bic['WDSP'], label='Generated data')
+    sns.distplot(sample_Bic2['WDSP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
 
-    # sns.distplot(data['WDSP'], label='Original data')
-    # sns.distplot(sample_Bic['WDSP'], label='Generated data')
-    # sns.distplot(sample_Bic2['WDSP'], label='Generated data dist')
-    # plt.legend()
-    # plt.show()
-    #
-    # sns.distplot(data['TEMP'], label='Original data')
-    # sns.distplot(sample_Bic['TEMP'], label='Generated data')
-    # sns.distplot(sample_Bic2['TEMP'], label='Generated data dist')
-    # plt.legend()
-    # plt.show()
-    #
-    # sns.distplot(data['SLP'], label='Original data')
-    # sns.distplot(sample_Bic['SLP'], label='Generated data')
-    # sns.distplot(sample_Bic2['SLP'], label='Generated data dist')
-    # plt.legend()
-    # plt.show()
-    #
-    # sns.distplot(data['DEWP'], label='Original data')
-    # sns.distplot(sample_Bic['DEWP'], label='Generated data')
-    # sns.distplot(sample_Bic2['DEWP'], label='Generated data dist')
-    # plt.legend()
-    # plt.show()
-    #
+    sns.distplot(data['TEMP'], bins=bins, label='Original data')
+    sns.distplot(sample_Bic['TEMP'], label='Generated data')
+    sns.distplot(sample_Bic2['TEMP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
+
+    sns.distplot(data['SLP'], bins=bins, label='Original data')
+    sns.distplot(sample_Bic['SLP'], label='Generated data')
+    sns.distplot(sample_Bic2['SLP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
+
+    sns.distplot(data['DEWP'], bins=bins, label='Original data')
+    sns.distplot(sample_Bic['DEWP'], label='Generated data')
+    sns.distplot(sample_Bic2['DEWP'], label='Generated data dist')
+    plt.legend()
+    plt.show()
 
     est3 = KBinsDiscretizer(n_bins=bins, encode='ordinal', strategy='kmeans')
     data_discrete = est3.fit_transform(missing_vals.values[:, 0:6])
@@ -192,11 +197,12 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
+    data['DATE'] = date
+    transformed_data['DATE'] = date
     plt.scatter(data['DATE'], data['SLP'], color='navy', label='Реальные значения')
     plt.scatter(transformed_data['DATE'], transformed_data['SLP'], color='gold', label='Заполненные значения')
     plt.show()
 
     print(accuracy1)
-
-
+    print(accuracy2)
 
